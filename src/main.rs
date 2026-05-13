@@ -1,3 +1,4 @@
+mod bgg;
 mod error;
 mod model;
 mod paths;

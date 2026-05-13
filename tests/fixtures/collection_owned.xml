@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items totalitems="1" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse" pubdate="Sun, 11 May 2026 19:00:00 +0000">
+  <item objecttype="thing" objectid="174430" subtype="boardgame" collid="987654321">
+    <name sortindex="1">Gloomhaven</name>
+    <yearpublished>2017</yearpublished>
+    <image>https://cf.geekdo-images.com/full/gloomhaven.jpg</image>
+    <thumbnail>https://cf.geekdo-images.com/thumb/gloomhaven.jpg</thumbnail>
+    <stats minplayers="1" maxplayers="4" playingtime="120">
+      <rating value="9">
+        <usersrated value="50000"/>
+        <average value="8.6"/>
+        <bayesaverage value="8.4"/>
+      </rating>
+    </stats>
+    <status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0"
+            wishlist="0" preordered="0" lastmodified="2026-04-01 12:34:56"/>
+    <numplays>17</numplays>
+  </item>
+</items>
