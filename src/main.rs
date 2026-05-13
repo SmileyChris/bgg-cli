@@ -13,12 +13,13 @@ use clap::Parser;
 use cli::{Cli, Command};
 
 fn main() {
+    reset_sigpipe();
     let parsed = Cli::parse();
     init_logging(parsed.verbose);
     let result = match parsed.command {
         Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
         Some(Command::Sync { full }) => cmd::sync::run(full),
-        Some(Command::List { owned, json, sort }) => cmd::list::run(owned, json, sort),
+        Some(Command::List { sort }) => cmd::list::run(sort),
         None | Some(Command::Status) => cmd::status::run(),
     };
     if let Err(e) = result {
@@ -26,6 +27,19 @@ fn main() {
         std::process::exit(e.exit_code());
     }
 }
+
+/// Restore the default SIGPIPE handler so piping into `head`, `less`, etc.
+/// terminates cleanly instead of panicking on the next println.
+#[cfg(unix)]
+fn reset_sigpipe() {
+    // SAFETY: setting a signal handler is a one-shot startup operation.
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    }
+}
+
+#[cfg(not(unix))]
+fn reset_sigpipe() {}
 
 fn init_logging(verbosity: u8) {
     let level = match verbosity {

@@ -17,8 +17,9 @@ bgg auth                   # prompt for username + password, store cookies in ke
 bgg auth --clear           # remove stored cookies
 bgg sync                   # incremental sync
 bgg sync --full            # full sync (required to detect deletions)
-bgg list                   # table view of cached collection
-bgg list --owned --json    # JSON, owned only
+bgg list                   # TTY: table of owned base games
+bgg list | jq ...          # pipe: full collection as JSON
+bgg list --sort year       # sort table by year (also: name, bggid)
 bgg status                 # explicit status (same as `bgg`)
 ```
 

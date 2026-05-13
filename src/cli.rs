@@ -44,14 +44,11 @@ pub enum Command {
         full: bool,
     },
     /// List cached collection items.
+    ///
+    /// On a terminal: prints a table of owned base games.
+    /// Piped or redirected: prints the full collection as JSON.
     List {
-        /// Only owned items.
-        #[arg(long)]
-        owned: bool,
-        /// JSON output instead of a table.
-        #[arg(long)]
-        json: bool,
-        /// Sort order. Name is always the tie-breaker.
+        /// Sort order (table view only). Name is always the tie-breaker.
         #[arg(long, value_enum, default_value_t = ListSort::Name)]
         sort: ListSort,
     },

@@ -258,6 +258,7 @@ dependencies = [
  "directories",
  "insta",
  "keyring",
+ "libc",
  "quick-xml",
  "reqwest",
  "rpassword",

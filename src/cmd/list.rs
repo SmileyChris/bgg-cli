@@ -7,46 +7,35 @@ use crate::paths;
 use std::cmp::Ordering;
 use std::io::IsTerminal;
 
-pub fn run(owned: bool, json: bool, sort: ListSort) -> Result<()> {
+pub fn run(sort: ListSort) -> Result<()> {
     let username = config::require_username()?;
     let cache = cache::load(&paths::cache_file(&username), &username)?;
-    let mut items: Vec<&CollectionItem> = cache
-        .items
-        .values()
-        .filter(|i| !owned || i.status.own)
-        .collect();
-    items.sort_by(|a, b| compare(a, b, sort));
 
-    if json {
+    if !std::io::stdout().is_terminal() {
+        // Non-TTY: dump the whole cached collection as JSON for piping into jq.
+        let items: Vec<&CollectionItem> = cache.items.values().collect();
         let out = serde_json::to_string_pretty(&items)
             .map_err(|e| crate::error::Error::Parse(format!("json: {e}")))?;
         println!("{out}");
         return Ok(());
     }
 
-    let linkify = std::io::stdout().is_terminal();
+    // TTY: table of owned base games.
+    let mut items: Vec<&CollectionItem> = cache
+        .items
+        .values()
+        .filter(|i| i.status.own && i.subtype == "boardgame")
+        .collect();
+    items.sort_by(|a, b| compare(a, b, sort));
 
-    if owned {
-        println!("{:<4}  {}", "YEAR", "NAME");
-    } else {
-        println!("{:<3}  {:<4}  {}", "OWN", "YEAR", "NAME");
-    }
+    println!("{:<4}  {}", "YEAR", "NAME");
     for item in items {
         let year = item
             .year_published
             .map(|y| y.to_string())
             .unwrap_or_else(|| "-".into());
-        let name = if linkify {
-            hyperlink(&bgg_url(item), &item.name)
-        } else {
-            item.name.clone()
-        };
-        if owned {
-            println!("{:<4}  {}", year, name);
-        } else {
-            let own = if item.status.own { "yes" } else { "no" };
-            println!("{:<3}  {:<4}  {}", own, year, name);
-        }
+        let name = hyperlink(&bgg_url(item), &item.name);
+        println!("{:<4}  {}", year, name);
     }
     Ok(())
 }
