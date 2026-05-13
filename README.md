@@ -19,7 +19,7 @@ bgg sync                   # incremental sync
 bgg sync --full            # full sync (required to detect deletions)
 bgg list                   # table of owned base games
 bgg list --sort=plays      # sort by plays (also: name, year, bggid, rating, time, added, geek, players)
-bgg list --sort=-rating    # prefix `-` inverts the natural direction
+bgg list --sort ^rating    # prefix `^` inverts the natural direction
 bgg list --cols=all        # show every column; or e.g. --cols=year,name,time
 bgg list --json | jq ...   # full unfiltered collection as JSON
 bgg status                 # explicit status (same as `bgg`)

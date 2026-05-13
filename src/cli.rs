@@ -36,8 +36,8 @@ pub enum Command {
     /// List cached collection items as a table of owned base games.
     ///
     /// --sort accepts: name, year, bggid, plays, rating, time, added, geek, players.
-    /// Each has a natural direction (e.g. plays desc, time asc); prefix with `-`
-    /// to invert (e.g. `--sort=-time`).
+    /// Each has a natural direction (e.g. plays desc, time asc); prefix with `^`
+    /// to invert (e.g. `--sort ^time` for longest first).
     ///
     /// --cols accepts: year, name, bggid, plays, rating, time, players, geek,
     /// or `all`. Defaults to `year,name`. When --cols is not provided, the

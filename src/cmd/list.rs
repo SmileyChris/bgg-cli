@@ -87,7 +87,7 @@ impl SortField {
 
 impl SortSpec {
     fn parse(s: &str) -> Result<Self> {
-        let (name, invert) = match s.strip_prefix('-') {
+        let (name, invert) = match s.strip_prefix('^') {
             Some(rest) => (rest, true),
             None => (s, false),
         };
@@ -422,26 +422,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sort_parses_field_and_inverts_with_dash_prefix() {
+    fn sort_parses_field_and_inverts_with_caret_prefix() {
         let a = SortSpec::parse("name").unwrap();
         assert_eq!(a.field, SortField::Name);
         assert_eq!(a.direction, Direction::Asc);
 
-        let b = SortSpec::parse("-name").unwrap();
+        let b = SortSpec::parse("^name").unwrap();
         assert_eq!(b.direction, Direction::Desc);
 
         let c = SortSpec::parse("plays").unwrap();
         assert_eq!(c.field, SortField::Plays);
         assert_eq!(c.direction, Direction::Desc); // natural
 
-        let d = SortSpec::parse("-plays").unwrap();
+        let d = SortSpec::parse("^plays").unwrap();
         assert_eq!(d.direction, Direction::Asc); // inverted from natural
     }
 
     #[test]
     fn sort_rejects_unknown_field() {
         assert!(SortSpec::parse("nope").is_err());
-        assert!(SortSpec::parse("-nope").is_err());
+        assert!(SortSpec::parse("^nope").is_err());
     }
 
     #[test]
