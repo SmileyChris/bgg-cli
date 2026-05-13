@@ -35,7 +35,6 @@ src/
     auth.rs
     sync.rs
     list.rs
-    show.rs
     status.rs
 tests/
   fixtures/
@@ -1714,8 +1713,6 @@ pub enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Show one cached item by BGG id.
-    Show { id: u32 },
     /// Show auth state, cached username, item count, and last sync time.
     Status,
 }
@@ -1987,11 +1984,10 @@ git commit -m "Wire bgg sync: fetch, merge, save cache"
 
 ---
 
-### Task 16: cmd::list, cmd::show, cmd::status
+### Task 16: cmd::list and cmd::status
 
 **Files:**
 - Create: `src/cmd/list.rs`
-- Create: `src/cmd/show.rs`
 - Create: `src/cmd/status.rs`
 - Modify: `src/cmd/mod.rs`
 - Modify: `src/main.rs`
@@ -2032,31 +2028,7 @@ pub fn run(owned: bool, json: bool) -> Result<()> {
 }
 ```
 
-- [ ] **Step 2: Write cmd::show**
-
-`src/cmd/show.rs`:
-
-```rust
-use crate::cache;
-use crate::config;
-use crate::error::{Error, Result};
-use crate::paths;
-
-pub fn run(id: u32) -> Result<()> {
-    let username = config::require_username()?;
-    let cache = cache::load(&paths::cache_file(&username), &username)?;
-    let item = cache
-        .items
-        .get(&id.to_string())
-        .ok_or_else(|| Error::Parse(format!("no cached item with id {id}")))?;
-    let out = serde_json::to_string_pretty(item)
-        .map_err(|e| Error::Parse(format!("json: {e}")))?;
-    println!("{out}");
-    Ok(())
-}
-```
-
-- [ ] **Step 3: Write cmd::status**
+- [ ] **Step 2: Write cmd::status**
 
 `src/cmd/status.rs`:
 
@@ -2102,14 +2074,13 @@ pub fn run() -> Result<()> {
 }
 ```
 
-- [ ] **Step 4: Wire dispatch**
+- [ ] **Step 3: Wire dispatch**
 
 `src/cmd/mod.rs`:
 
 ```rust
 pub mod auth;
 pub mod list;
-pub mod show;
 pub mod status;
 pub mod sync;
 ```
@@ -2121,21 +2092,20 @@ In `src/main.rs`, replace the match body with the full set (status is the defaul
         Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
         Some(Command::Sync { full }) => cmd::sync::run(full),
         Some(Command::List { owned, json }) => cmd::list::run(owned, json),
-        Some(Command::Show { id }) => cmd::show::run(id),
         None | Some(Command::Status) => cmd::status::run(),
     };
 ```
 
-- [ ] **Step 5: Build**
+- [ ] **Step 4: Build**
 
 Run: `cargo build`
 Expected: compiles cleanly. No warnings.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/cmd src/main.rs
-git commit -m "Wire list, show, status subcommands; status is default"
+git commit -m "Wire list and status subcommands; status is default"
 ```
 
 ---
@@ -2163,7 +2133,7 @@ fn help_lists_all_subcommands() {
         .stdout
         .clone();
     let text = String::from_utf8(out).unwrap();
-    for sub in ["auth", "sync", "list", "show", "status"] {
+    for sub in ["auth", "sync", "list", "status"] {
         assert!(text.contains(sub), "help missing subcommand: {sub}\n---\n{text}");
     }
 }
@@ -2242,7 +2212,6 @@ bgg sync                   # incremental sync
 bgg sync --full            # full sync (required to detect deletions)
 bgg list                   # table view of cached collection
 bgg list --owned --json    # JSON, owned only
-bgg show 174430            # one item by BGG id
 bgg status                 # explicit status (same as `bgg`)
 ```
 

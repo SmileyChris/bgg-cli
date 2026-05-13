@@ -25,15 +25,19 @@ Single binary, name `bgg`. Subcommands:
 
 | Command            | Purpose                                                      |
 | ------------------ | ------------------------------------------------------------ |
-| `bgg login`        | Prompt for username + password; fetch & store cookies.       |
-| `bgg logout`       | Clear stored cookies (and cached username).                  |
-| `bgg sync`         | Incremental sync via `modifiedsince`. Default command.       |
+| `bgg`              | Default: `status`.                                           |
+| `bgg auth`         | Prompt for username + password; fetch & store cookies.       |
+| `bgg auth --clear` | Clear stored cookies.                                        |
+| `bgg sync`         | Incremental sync via `modifiedsince`.                        |
 | `bgg sync --full`  | Ignore `modifiedsince`. Required to detect deletions.        |
 | `bgg list`         | Print the cached collection. Flags: `--owned`, `--json`.     |
-| `bgg show <id>`    | Print one cached item by BGG ID.                             |
 | `bgg status`       | Show username, last sync time, item count, auth state.       |
 
-Global flags: `--verbose / -v`, `--cache-dir <path>` (override XDG).
+Per-item lookup is not a built-in command — the cache is plain JSON on disk,
+so `jq '.items["174430"]' ~/.local/state/bgg-cli/collection-<user>.json` (or
+`bgg list --json | jq ...`) covers it.
+
+Global flag: `--verbose / -v`.
 
 Exit codes: `0` ok, `1` generic error, `2` auth required (re-run `login`).
 
