@@ -12,12 +12,16 @@ pub fn load() -> Result<Config> {
     if !path.exists() {
         return Ok(Config::default());
     }
-    let s = std::fs::read_to_string(&path)
-        .map_err(|e| Error::Cache { path: path.clone(), source: e })?;
+    let s = std::fs::read_to_string(&path).map_err(|e| Error::Cache {
+        path: path.clone(),
+        source: e,
+    })?;
     let mut cfg = Config::default();
     for line in s.lines() {
         let line = line.trim();
-        if line.is_empty() || line.starts_with('#') { continue; }
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
         if let Some(rest) = line.strip_prefix("username") {
             let rest = rest.trim().trim_start_matches('=').trim();
             let val = rest.trim_matches('"').to_string();
@@ -30,8 +34,10 @@ pub fn load() -> Result<Config> {
 pub fn save(cfg: &Config) -> Result<()> {
     let path = paths::config_file();
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| Error::Cache { path: parent.to_path_buf(), source: e })?;
+        std::fs::create_dir_all(parent).map_err(|e| Error::Cache {
+            path: parent.to_path_buf(),
+            source: e,
+        })?;
     }
     let mut out = String::new();
     if let Some(u) = &cfg.username {

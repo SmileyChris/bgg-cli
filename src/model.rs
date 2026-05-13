@@ -50,7 +50,11 @@ pub struct CacheFile {
 
 impl CacheFile {
     pub fn empty(username: impl Into<String>) -> Self {
-        Self { username: username.into(), last_sync: None, items: BTreeMap::new() }
+        Self {
+            username: username.into(),
+            last_sync: None,
+            items: BTreeMap::new(),
+        }
     }
 }
 

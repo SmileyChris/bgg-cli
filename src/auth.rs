@@ -23,7 +23,9 @@ pub fn login(base: &str, username: &str, password: &str) -> Result<Cookies> {
         .map_err(Error::Network)?;
     let resp = client
         .post(format!("{base}{LOGIN_PATH}"))
-        .json(&LoginBody { credentials: Credentials { username, password } })
+        .json(&LoginBody {
+            credentials: Credentials { username, password },
+        })
         .send()
         .map_err(Error::Network)?;
 
@@ -50,8 +52,14 @@ fn extract_cookies(headers: &reqwest::header::HeaderMap) -> Result<Cookies> {
         }
     }
     match (bggusername, bggpassword, session_id) {
-        (Some(u), Some(p), Some(s)) => Ok(Cookies { bggusername: u, bggpassword: p, session_id: s }),
-        _ => Err(Error::Secrets("login response missing expected cookies".into())),
+        (Some(u), Some(p), Some(s)) => Ok(Cookies {
+            bggusername: u,
+            bggpassword: p,
+            session_id: s,
+        }),
+        _ => Err(Error::Secrets(
+            "login response missing expected cookies".into(),
+        )),
     }
 }
 
@@ -71,7 +79,10 @@ mod tests {
             })))
             .respond_with(
                 ResponseTemplate::new(204)
-                    .append_header("set-cookie", "bggusername=alice; Path=/; Domain=.boardgamegeek.com")
+                    .append_header(
+                        "set-cookie",
+                        "bggusername=alice; Path=/; Domain=.boardgamegeek.com",
+                    )
                     .append_header("set-cookie", "bggpassword=cookiepw; Path=/")
                     .append_header("set-cookie", "SessionID=abc123; Path=/")
                     .append_header("set-cookie", "other=ignored; Path=/"),

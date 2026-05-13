@@ -164,7 +164,10 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(method("GET"))
             .and(path("/xmlapi2/collection"))
-            .and(header("cookie", "bggusername=alice; bggpassword=pw; SessionID=sid"))
+            .and(header(
+                "cookie",
+                "bggusername=alice; bggpassword=pw; SessionID=sid",
+            ))
             .respond_with(ResponseTemplate::new(200).set_body_string("<items/>"))
             .mount(&server)
             .await;
@@ -176,7 +179,9 @@ mod tests {
         };
         let url = server.uri();
         let body = tokio::task::spawn_blocking(move || {
-            let c = HttpClient::with_base(Some(cookies), url).unwrap().with_fast_timing();
+            let c = HttpClient::with_base(Some(cookies), url)
+                .unwrap()
+                .with_fast_timing();
             c.get("/xmlapi2/collection", &[("username", "alice".into())])
         })
         .await

@@ -15,7 +15,10 @@ pub fn fetch(
     ];
     if let Some(ts) = modified_since {
         let safe = ts - Duration::minutes(1);
-        query.push(("modifiedsince", safe.format("%y-%m-%d %H:%M:%S").to_string()));
+        query.push((
+            "modifiedsince",
+            safe.format("%y-%m-%d %H:%M:%S").to_string(),
+        ));
     }
     let xml = client.get("/xmlapi2/collection", &query)?;
     parse::parse_collection(&xml)

@@ -33,7 +33,9 @@ pub fn run(full: bool) -> Result<()> {
         report.unchanged,
     );
     if !full {
-        println!("Tip: incremental sync cannot detect deletions. Run `bgg sync --full` periodically.");
+        println!(
+            "Tip: incremental sync cannot detect deletions. Run `bgg sync --full` periodically."
+        );
     }
     Ok(())
 }

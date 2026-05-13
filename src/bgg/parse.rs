@@ -99,8 +99,8 @@ impl BoolFlag {
 }
 
 pub fn parse_collection(xml: &str) -> Result<Vec<CollectionItem>> {
-    let parsed: ItemsXml = quick_xml::de::from_str(xml)
-        .map_err(|e| Error::Parse(format!("collection: {e}")))?;
+    let parsed: ItemsXml =
+        quick_xml::de::from_str(xml).map_err(|e| Error::Parse(format!("collection: {e}")))?;
     parsed.items.into_iter().map(item_from_xml).collect()
 }
 
@@ -115,16 +115,36 @@ fn item_from_xml(x: ItemXml) -> Result<CollectionItem> {
         wishlist: x.status.wishlist.truthy(),
         wishlist_priority: x.status.wishlistpriority,
         preordered: x.status.preordered.truthy(),
-        last_modified: x.status.lastmodified.as_deref().and_then(parse_bgg_datetime),
+        last_modified: x
+            .status
+            .lastmodified
+            .as_deref()
+            .and_then(parse_bgg_datetime),
     };
     let stats = x.stats.map(|s| Stats {
         min_players: s.minplayers,
         max_players: s.maxplayers,
         playing_time: s.playingtime,
-        user_rating: s.rating.as_ref().and_then(|r| r.value.as_deref()).and_then(parse_rating),
-        average: s.rating.as_ref().and_then(|r| r.average.as_ref()).map(|v| v.value),
-        bayes_average: s.rating.as_ref().and_then(|r| r.bayesaverage.as_ref()).map(|v| v.value),
-        users_rated: s.rating.as_ref().and_then(|r| r.usersrated.as_ref()).map(|v| v.value),
+        user_rating: s
+            .rating
+            .as_ref()
+            .and_then(|r| r.value.as_deref())
+            .and_then(parse_rating),
+        average: s
+            .rating
+            .as_ref()
+            .and_then(|r| r.average.as_ref())
+            .map(|v| v.value),
+        bayes_average: s
+            .rating
+            .as_ref()
+            .and_then(|r| r.bayesaverage.as_ref())
+            .map(|v| v.value),
+        users_rated: s
+            .rating
+            .as_ref()
+            .and_then(|r| r.usersrated.as_ref())
+            .map(|v| v.value),
     });
     Ok(CollectionItem {
         id: x.objectid,
@@ -141,7 +161,11 @@ fn item_from_xml(x: ItemXml) -> Result<CollectionItem> {
 }
 
 fn parse_rating(s: &str) -> Option<f32> {
-    if s.eq_ignore_ascii_case("n/a") { None } else { s.parse().ok() }
+    if s.eq_ignore_ascii_case("n/a") {
+        None
+    } else {
+        s.parse().ok()
+    }
 }
 
 fn parse_bgg_datetime(s: &str) -> Option<DateTime<Utc>> {

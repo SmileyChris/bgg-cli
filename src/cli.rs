@@ -1,7 +1,11 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(author, version, about = "Sync a BoardGameGeek user's collection to a local cache.")]
+#[command(
+    author,
+    version,
+    about = "Sync a BoardGameGeek user's collection to a local cache."
+)]
 pub struct Cli {
     /// Verbose logging (-v info, -vv debug, -vvv trace).
     #[arg(short, long, action = clap::ArgAction::Count, global = true)]

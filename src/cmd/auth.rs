@@ -21,7 +21,9 @@ fn login(username_arg: Option<String>) -> Result<()> {
         .map_err(|e| Error::Secrets(format!("password prompt: {e}")))?;
     let cookies = bgg_auth::login(BGG_BASE, &username, &password)?;
     secrets::store(&username, &cookies)?;
-    config::save(&Config { username: Some(username.clone()) })?;
+    config::save(&Config {
+        username: Some(username.clone()),
+    })?;
     println!("Authenticated as {username}. Cookies stored in OS keyring.");
     Ok(())
 }

@@ -8,8 +8,8 @@ fn entry(username: &str) -> Result<keyring::Entry> {
 }
 
 pub fn store(username: &str, cookies: &Cookies) -> Result<()> {
-    let blob = serde_json::to_string(cookies)
-        .map_err(|e| Error::Secrets(format!("serialize: {e}")))?;
+    let blob =
+        serde_json::to_string(cookies).map_err(|e| Error::Secrets(format!("serialize: {e}")))?;
     entry(username)?
         .set_password(&blob)
         .map_err(|e| Error::Secrets(e.to_string()))

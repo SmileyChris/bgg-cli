@@ -7,20 +7,27 @@ pub fn load(path: &Path, username: &str) -> Result<CacheFile> {
     if !path.exists() {
         return Err(Error::NoCache(username.to_string()));
     }
-    let bytes = std::fs::read(path).map_err(|e| Error::Cache { path: path.to_path_buf(), source: e })?;
+    let bytes = std::fs::read(path).map_err(|e| Error::Cache {
+        path: path.to_path_buf(),
+        source: e,
+    })?;
     serde_json::from_slice(&bytes)
         .map_err(|e| Error::Parse(format!("cache {}: {e}", path.display())))
 }
 
 pub fn save(path: &Path, cache: &CacheFile) -> Result<()> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| Error::Cache { path: parent.to_path_buf(), source: e })?;
+        std::fs::create_dir_all(parent).map_err(|e| Error::Cache {
+            path: parent.to_path_buf(),
+            source: e,
+        })?;
     }
     let bytes = serde_json::to_vec_pretty(cache)
         .map_err(|e| Error::Parse(format!("cache serialize: {e}")))?;
-    std::fs::write(path, bytes)
-        .map_err(|e| Error::Cache { path: path.to_path_buf(), source: e })
+    std::fs::write(path, bytes).map_err(|e| Error::Cache {
+        path: path.to_path_buf(),
+        source: e,
+    })
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -106,7 +113,14 @@ mod tests {
             item(3, "Wingspan"),
         ];
         let report = merge(&mut cache, incoming);
-        assert_eq!(report, MergeReport { new: 1, updated: 1, unchanged: 1 });
+        assert_eq!(
+            report,
+            MergeReport {
+                new: 1,
+                updated: 1,
+                unchanged: 1
+            }
+        );
         assert_eq!(cache.items["2"].name, "Catan: Cities");
         assert!(cache.last_sync.is_some());
     }

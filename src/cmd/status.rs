@@ -25,7 +25,10 @@ pub fn run() -> Result<()> {
     let path = paths::cache_file(&username);
     match cache::load(&path, &username) {
         Ok(c) => {
-            let last = c.last_sync.map(|t| t.to_rfc3339()).unwrap_or_else(|| "never".into());
+            let last = c
+                .last_sync
+                .map(|t| t.to_rfc3339())
+                .unwrap_or_else(|| "never".into());
             println!("Cache: {} items at {}", c.items.len(), path.display());
             println!("Last sync: {last}");
             println!("Note: incremental sync does not detect deletions. Use `bgg sync --full`.");

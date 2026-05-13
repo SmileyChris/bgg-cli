@@ -21,7 +21,10 @@ pub fn run(owned: bool, json: bool) -> Result<()> {
 
     println!("{:>7}  {:<6}  {:<4}  {}", "BGG ID", "OWN", "YEAR", "NAME");
     for item in items {
-        let year = item.year_published.map(|y| y.to_string()).unwrap_or_else(|| "-".into());
+        let year = item
+            .year_published
+            .map(|y| y.to_string())
+            .unwrap_or_else(|| "-".into());
         let own = if item.status.own { "yes" } else { "no" };
         println!("{:>7}  {:<6}  {:<4}  {}", item.id, own, year, item.name);
     }

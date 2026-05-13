@@ -12,7 +12,10 @@ fn help_lists_all_subcommands() {
         .clone();
     let text = String::from_utf8(out).unwrap();
     for sub in ["auth", "sync", "list", "status"] {
-        assert!(text.contains(sub), "help missing subcommand: {sub}\n---\n{text}");
+        assert!(
+            text.contains(sub),
+            "help missing subcommand: {sub}\n---\n{text}"
+        );
     }
 }
 
