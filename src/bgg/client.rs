@@ -80,7 +80,7 @@ impl HttpClient {
                         return Err(Error::QueueTimeout { attempts });
                     }
                     self.report(&format!(
-                        "queued — BGG is preparing the response (try {attempts}/{})",
+                        "queued by BGG, retry {attempts}/{}",
                         self.max_queue_retries
                     ));
                     std::thread::sleep(self.queue_retry_delay);
