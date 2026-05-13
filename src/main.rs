@@ -18,7 +18,7 @@ fn main() {
     let result = match parsed.command {
         Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
         Some(Command::Sync { full }) => cmd::sync::run(full),
-        Some(Command::List { owned, json }) => cmd::list::run(owned, json),
+        Some(Command::List { owned, json, sort }) => cmd::list::run(owned, json, sort),
         None | Some(Command::Status) => cmd::status::run(),
     };
     if let Err(e) = result {

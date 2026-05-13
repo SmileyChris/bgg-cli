@@ -1,4 +1,14 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum ListSort {
+    /// By name (default), case-insensitive.
+    Name,
+    /// By year published ascending, then name. Items without a year sort last.
+    Year,
+    /// By BGG object id ascending, then name.
+    Bggid,
+}
 
 #[derive(Parser)]
 #[command(
@@ -41,6 +51,9 @@ pub enum Command {
         /// JSON output instead of a table.
         #[arg(long)]
         json: bool,
+        /// Sort order. Name is always the tie-breaker.
+        #[arg(long, value_enum, default_value_t = ListSort::Name)]
+        sort: ListSort,
     },
     /// Show auth state, cached username, item count, and last sync time.
     Status,
