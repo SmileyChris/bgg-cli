@@ -17,6 +17,7 @@ fn main() {
     init_logging(parsed.verbose);
     let result = match parsed.command {
         Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
+        Some(Command::Sync { full }) => cmd::sync::run(full),
         None | Some(Command::Status) => {
             eprintln!("status not yet implemented");
             std::process::exit(1);
