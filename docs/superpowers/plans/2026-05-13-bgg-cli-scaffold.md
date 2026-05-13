@@ -32,8 +32,7 @@ src/
     parse.rs         // XML -> Vec<CollectionItem>
   cmd/
     mod.rs
-    login.rs
-    logout.rs
+    auth.rs
     sync.rs
     list.rs
     show.rs
@@ -136,7 +135,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("authentication required: run `bgg login`")]
+    #[error("authentication required: run `bgg auth`")]
     AuthRequired,
 
     #[error("BGG queued the request and did not return data after {attempts} retries")]
@@ -164,7 +163,7 @@ pub enum Error {
     #[error("no cached collection for user {0}; run `bgg sync`")]
     NoCache(String),
 
-    #[error("no logged-in user; run `bgg login`")]
+    #[error("no logged-in user; run `bgg auth`")]
     NoUser,
 }
 
@@ -1684,19 +1683,22 @@ pub struct Cli {
     #[arg(short, long, action = clap::ArgAction::Count, global = true)]
     pub verbose: u8,
 
+    /// Subcommand to run. If omitted, runs `status`.
     #[command(subcommand)]
-    pub command: Command,
+    pub command: Option<Command>,
 }
 
 #[derive(Subcommand)]
 pub enum Command {
     /// Authenticate with BGG and store cookies in the OS keyring.
-    Login {
+    /// Use `--clear` to remove stored cookies instead.
+    Auth {
         /// Username (defaults to the value in config.toml if set).
         username: Option<String>,
+        /// Clear stored cookies for the current user instead of logging in.
+        #[arg(long)]
+        clear: bool,
     },
-    /// Clear the stored cookies for the current user.
-    Logout,
     /// Sync the collection. By default, incremental via `modifiedsince`.
     Sync {
         /// Ignore modifiedsince and pull the whole collection. Required to detect deletions.
@@ -1757,42 +1759,60 @@ git commit -m "Add clap CLI surface with all subcommands"
 
 ---
 
-### Task 14: cmd::login
+### Task 14: cmd::auth
 
 **Files:**
 - Create: `src/cmd/mod.rs`
-- Create: `src/cmd/login.rs`
+- Create: `src/cmd/auth.rs`
 - Modify: `src/main.rs`
 
-- [ ] **Step 1: Write cmd::login**
+- [ ] **Step 1: Write cmd::auth (login + clear in one)**
 
 `src/cmd/mod.rs`:
 
 ```rust
-pub mod login;
+pub mod auth;
 ```
 
-`src/cmd/login.rs`:
+`src/cmd/auth.rs`:
 
 ```rust
-use crate::auth;
+use crate::auth as bgg_auth;
 use crate::config::{self, Config};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::secrets;
 
 const BGG_BASE: &str = "https://boardgamegeek.com";
 
-pub fn run(username_arg: Option<String>) -> Result<()> {
+pub fn run(username_arg: Option<String>, clear: bool) -> Result<()> {
+    if clear {
+        return clear_cookies();
+    }
+    login(username_arg)
+}
+
+fn login(username_arg: Option<String>) -> Result<()> {
     let cfg = config::load()?;
     let username = username_arg
         .or(cfg.username.clone())
         .unwrap_or_else(prompt_username);
     let password = rpassword::prompt_password(format!("Password for BGG user {username}: "))
-        .map_err(|e| crate::error::Error::Secrets(format!("password prompt: {e}")))?;
-    let cookies = auth::login(BGG_BASE, &username, &password)?;
+        .map_err(|e| Error::Secrets(format!("password prompt: {e}")))?;
+    let cookies = bgg_auth::login(BGG_BASE, &username, &password)?;
     secrets::store(&username, &cookies)?;
     config::save(&Config { username: Some(username.clone()) })?;
-    println!("Logged in as {username}. Cookies stored in OS keyring.");
+    println!("Authenticated as {username}. Cookies stored in OS keyring.");
+    Ok(())
+}
+
+fn clear_cookies() -> Result<()> {
+    let cfg = config::load()?;
+    let Some(username) = cfg.username else {
+        println!("No stored auth.");
+        return Ok(());
+    };
+    secrets::delete(&username)?;
+    println!("Cleared stored cookies for {username}. (Config and cache retained.)");
     Ok(())
 }
 
@@ -1806,7 +1826,7 @@ fn prompt_username() -> String {
 }
 ```
 
-- [ ] **Step 2: Wire dispatch in main**
+- [ ] **Step 2: Wire dispatch in main, default to status**
 
 `src/main.rs`:
 
@@ -1829,7 +1849,12 @@ fn main() {
     let parsed = Cli::parse();
     init_logging(parsed.verbose);
     let result = match parsed.command {
-        Command::Login { username } => cmd::login::run(username),
+        Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
+        // status is the default when no subcommand is given
+        None | Some(Command::Status) => {
+            eprintln!("status not yet implemented");
+            std::process::exit(1);
+        }
         _ => {
             eprintln!("not yet implemented");
             std::process::exit(1);
@@ -1864,7 +1889,7 @@ Expected: compiles cleanly.
 
 ```bash
 git add src/cmd src/main.rs
-git commit -m "Wire bgg login: prompt, authenticate, store cookies"
+git commit -m "Wire bgg auth: prompt+store login; --clear removes cookies"
 ```
 
 ---
@@ -1927,15 +1952,25 @@ pub fn run(full: bool) -> Result<()> {
 `src/cmd/mod.rs`:
 
 ```rust
-pub mod login;
+pub mod auth;
 pub mod sync;
 ```
 
-In `src/main.rs`, extend the match:
+In `src/main.rs`, extend the match to include sync (full replacement of the match block):
 
 ```rust
-        Command::Login { username } => cmd::login::run(username),
-        Command::Sync { full } => cmd::sync::run(full),
+    let result = match parsed.command {
+        Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
+        Some(Command::Sync { full }) => cmd::sync::run(full),
+        None | Some(Command::Status) => {
+            eprintln!("status not yet implemented");
+            std::process::exit(1);
+        }
+        _ => {
+            eprintln!("not yet implemented");
+            std::process::exit(1);
+        }
+    };
 ```
 
 - [ ] **Step 3: Build**
@@ -1952,13 +1987,12 @@ git commit -m "Wire bgg sync: fetch, merge, save cache"
 
 ---
 
-### Task 16: cmd::list, cmd::show, cmd::status, cmd::logout
+### Task 16: cmd::list, cmd::show, cmd::status
 
 **Files:**
 - Create: `src/cmd/list.rs`
 - Create: `src/cmd/show.rs`
 - Create: `src/cmd/status.rs`
-- Create: `src/cmd/logout.rs`
 - Modify: `src/cmd/mod.rs`
 - Modify: `src/main.rs`
 
@@ -2041,7 +2075,7 @@ pub fn run() -> Result<()> {
     };
     let auth_state = match secrets::load(&username) {
         Ok(_) => "cookies present",
-        Err(crate::error::Error::AuthRequired) => "no cookies stored — run `bgg login`",
+        Err(crate::error::Error::AuthRequired) => "no cookies stored — run `bgg auth`",
         Err(e) => {
             println!("User: {username}");
             println!("Auth: error ({e})");
@@ -2068,63 +2102,40 @@ pub fn run() -> Result<()> {
 }
 ```
 
-- [ ] **Step 4: Write cmd::logout**
-
-`src/cmd/logout.rs`:
-
-```rust
-use crate::config;
-use crate::error::Result;
-use crate::secrets;
-
-pub fn run() -> Result<()> {
-    let cfg = config::load()?;
-    let Some(username) = cfg.username else {
-        println!("No logged-in user.");
-        return Ok(());
-    };
-    secrets::delete(&username)?;
-    println!("Cleared stored cookies for {username}. (Config and cache retained.)");
-    Ok(())
-}
-```
-
-- [ ] **Step 5: Wire dispatch**
+- [ ] **Step 4: Wire dispatch**
 
 `src/cmd/mod.rs`:
 
 ```rust
+pub mod auth;
 pub mod list;
-pub mod login;
-pub mod logout;
 pub mod show;
 pub mod status;
 pub mod sync;
 ```
 
-In `src/main.rs`, replace the match body with the full set:
+In `src/main.rs`, replace the match body with the full set (status is the default when no subcommand is given):
 
 ```rust
     let result = match parsed.command {
-        Command::Login { username } => cmd::login::run(username),
-        Command::Logout => cmd::logout::run(),
-        Command::Sync { full } => cmd::sync::run(full),
-        Command::List { owned, json } => cmd::list::run(owned, json),
-        Command::Show { id } => cmd::show::run(id),
-        Command::Status => cmd::status::run(),
+        Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
+        Some(Command::Sync { full }) => cmd::sync::run(full),
+        Some(Command::List { owned, json }) => cmd::list::run(owned, json),
+        Some(Command::Show { id }) => cmd::show::run(id),
+        None | Some(Command::Status) => cmd::status::run(),
     };
 ```
 
-- [ ] **Step 6: Build**
+- [ ] **Step 5: Build**
 
 Run: `cargo build`
 Expected: compiles cleanly. No warnings.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/cmd src/main.rs
-git commit -m "Wire list, show, status, logout subcommands"
+git commit -m "Wire list, show, status subcommands; status is default"
 ```
 
 ---
@@ -2152,7 +2163,7 @@ fn help_lists_all_subcommands() {
         .stdout
         .clone();
     let text = String::from_utf8(out).unwrap();
-    for sub in ["login", "logout", "sync", "list", "show", "status"] {
+    for sub in ["auth", "sync", "list", "show", "status"] {
         assert!(text.contains(sub), "help missing subcommand: {sub}\n---\n{text}");
     }
 }
@@ -2187,8 +2198,8 @@ Expected: all unit + integration tests pass.
 Run: `cargo run -- --help`
 Expected: clap help text.
 
-Run: `cargo run -- status` (no creds configured)
-Expected: "No logged-in user. Run `bgg login`."
+Run: `cargo run` (no args, no creds configured)
+Expected: status output saying "No logged-in user. Run `bgg auth`."
 
 - [ ] **Step 4: Commit**
 
@@ -2224,14 +2235,15 @@ cargo install --path .
 ## Use
 
 ```
-bgg login                  # prompt for username + password, store cookies in keyring
+bgg                        # default: status (auth state, item count, last sync)
+bgg auth                   # prompt for username + password, store cookies in keyring
+bgg auth --clear           # remove stored cookies
 bgg sync                   # incremental sync
 bgg sync --full            # full sync (required to detect deletions)
 bgg list                   # table view of cached collection
 bgg list --owned --json    # JSON, owned only
 bgg show 174430            # one item by BGG id
-bgg status                 # auth state, item count, last sync
-bgg logout                 # clear stored cookies
+bgg status                 # explicit status (same as `bgg`)
 ```
 
 Cookies live in the OS keyring (Secret Service / macOS Keychain / Windows
