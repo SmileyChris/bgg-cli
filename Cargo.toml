@@ -18,6 +18,7 @@ anyhow = "1"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive", "cargo"] }
 directories = "5"
+indicatif = "0.17"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 quick-xml = { version = "0.36", features = ["serialize"] }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "cookies", "json", "rustls-tls"] }

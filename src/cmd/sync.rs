@@ -1,5 +1,5 @@
 use crate::auth as bgg_auth;
-use crate::bgg::client::HttpClient;
+use crate::bgg::client::{HttpClient, ProgressFn};
 use crate::bgg::collection;
 use crate::cache;
 use crate::cmd::auth::BGG_BASE;
@@ -9,6 +9,15 @@ use crate::model::{CacheFile, CollectionItem, StoredCreds};
 use crate::paths;
 use crate::secrets;
 use chrono::{DateTime, Utc};
+use indicatif::{ProgressBar, ProgressStyle};
+use std::time::Duration;
+
+/// Subtypes we sync. BGG's collection endpoint only returns one subtype per
+/// request, so a full picture needs one call per entry here.
+const SUBTYPES: &[(&str, &str)] = &[
+    ("boardgame", "base games"),
+    ("boardgameexpansion", "expansions"),
+];
 
 pub fn run(full: bool) -> Result<()> {
     let username = config::require_username()?;
@@ -22,9 +31,19 @@ pub fn run(full: bool) -> Result<()> {
     };
 
     let modified_since = if full { None } else { cache.last_sync };
-    let items = fetch_with_refresh(&username, &mut creds, modified_since)?;
-    let report = cache::merge(&mut cache, items, full);
+    let pb = make_spinner();
+
+    let mut all_items: Vec<CollectionItem> = Vec::new();
+    for (subtype, label) in SUBTYPES {
+        pb.set_message(format!("Fetching {label}…"));
+        let items = fetch_with_refresh(&username, &mut creds, modified_since, subtype, &pb)?;
+        all_items.extend(items);
+    }
+
+    pb.set_message("Merging into local cache…");
+    let report = cache::merge(&mut cache, all_items, full);
     cache::save(&cache_path, &cache)?;
+    pb.finish_and_clear();
 
     let total = cache.items.len();
     let processed = report.new + report.updated + report.unchanged;
@@ -49,31 +68,49 @@ pub fn run(full: bool) -> Result<()> {
     Ok(())
 }
 
-/// Fetch the collection, refreshing the cookie via stored password when we
-/// know the SessionID is stale (proactive) or when the server tells us so via
-/// 401 (reactive safety net for server-side invalidation). Updated cookies are
-/// persisted back to the keyring.
+fn make_spinner() -> ProgressBar {
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.cyan} {msg}")
+            .unwrap(),
+    );
+    pb.enable_steady_tick(Duration::from_millis(120));
+    pb
+}
+
+fn build_client(creds: &StoredCreds, pb: &ProgressBar) -> Result<HttpClient> {
+    let pb_for_cb = pb.clone();
+    let cb: Box<ProgressFn> = Box::new(move |msg| pb_for_cb.set_message(msg.to_string()));
+    HttpClient::new(Some(creds.cookies.clone())).map(|c| c.with_progress(cb))
+}
+
+/// Fetch one subtype, refreshing the cookie via stored password when we know
+/// the SessionID is stale (proactive) or when the server tells us so via 401
+/// (reactive safety net). Updated cookies are persisted back to the keyring.
 fn fetch_with_refresh(
     username: &str,
     creds: &mut StoredCreds,
     modified_since: Option<DateTime<Utc>>,
+    subtype: &str,
+    pb: &ProgressBar,
 ) -> Result<Vec<CollectionItem>> {
     let stale = creds
         .session_fresh_until
         .map(|t| Utc::now() >= t)
         .unwrap_or(false);
     if stale {
-        tracing::info!("BGG session cookie past its declared expiry; refreshing");
+        pb.set_message("Refreshing BGG session…");
         refresh(username, creds)?;
     }
-    let client = HttpClient::new(Some(creds.cookies.clone()))?;
-    match collection::fetch(&client, username, modified_since) {
+    let client = build_client(creds, pb)?;
+    match collection::fetch(&client, username, modified_since, Some(subtype)) {
         Ok(items) => Ok(items),
         Err(Error::AuthRequired) => {
-            tracing::info!("BGG returned 401 despite fresh cookie; refreshing");
+            pb.set_message("Session expired, refreshing…");
             refresh(username, creds)?;
-            let client = HttpClient::new(Some(creds.cookies.clone()))?;
-            collection::fetch(&client, username, modified_since)
+            let client = build_client(creds, pb)?;
+            collection::fetch(&client, username, modified_since, Some(subtype))
         }
         Err(e) => Err(e),
     }

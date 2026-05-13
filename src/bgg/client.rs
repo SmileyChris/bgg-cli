@@ -7,6 +7,8 @@ use std::time::{Duration, Instant};
 
 const USER_AGENT: &str = concat!("bgg-cli/", env!("CARGO_PKG_VERSION"));
 
+pub type ProgressFn = dyn Fn(&str) + Send + Sync;
+
 pub struct HttpClient {
     inner: Client,
     cookies: Option<Cookies>,
@@ -15,6 +17,7 @@ pub struct HttpClient {
     queue_retry_delay: Duration,
     max_queue_retries: u32,
     last_call: Mutex<Option<Instant>>,
+    progress: Option<Box<ProgressFn>>,
 }
 
 impl HttpClient {
@@ -35,7 +38,21 @@ impl HttpClient {
             queue_retry_delay: Duration::from_secs(12),
             max_queue_retries: 25,
             last_call: Mutex::new(None),
+            progress: None,
         })
+    }
+
+    /// Attach a callback that receives status messages — currently fired before
+    /// each 202-queue retry so the caller can update a spinner.
+    pub fn with_progress(mut self, cb: Box<ProgressFn>) -> Self {
+        self.progress = Some(cb);
+        self
+    }
+
+    fn report(&self, msg: &str) {
+        if let Some(cb) = &self.progress {
+            cb(msg);
+        }
     }
 
     #[cfg(test)]
@@ -62,6 +79,10 @@ impl HttpClient {
                     if attempts >= self.max_queue_retries {
                         return Err(Error::QueueTimeout { attempts });
                     }
+                    self.report(&format!(
+                        "queued — BGG is preparing the response (try {attempts}/{})",
+                        self.max_queue_retries
+                    ));
                     std::thread::sleep(self.queue_retry_delay);
                 }
                 StatusCode::UNAUTHORIZED => return Err(Error::AuthRequired),

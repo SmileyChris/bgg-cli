@@ -8,11 +8,15 @@ pub fn fetch(
     client: &HttpClient,
     username: &str,
     modified_since: Option<DateTime<Utc>>,
+    subtype: Option<&str>,
 ) -> Result<Vec<CollectionItem>> {
     let mut query: Vec<(&str, String)> = vec![
         ("username", username.to_string()),
         ("stats", "1".to_string()),
     ];
+    if let Some(s) = subtype {
+        query.push(("subtype", s.to_string()));
+    }
     if let Some(ts) = modified_since {
         let safe = ts - Duration::minutes(1);
         query.push((
@@ -50,12 +54,34 @@ mod tests {
         let url = server.uri();
         let items = tokio::task::spawn_blocking(move || {
             let c = HttpClient::with_base(None, url).unwrap().with_fast_timing();
-            fetch(&c, "alice", Some(since))
+            fetch(&c, "alice", Some(since), None)
         })
         .await
         .unwrap()
         .unwrap();
         assert!(items.is_empty());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn includes_subtype_when_provided() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/xmlapi2/collection"))
+            .and(query_param("subtype", "boardgameexpansion"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                std::fs::read_to_string("tests/fixtures/collection_empty.xml").unwrap(),
+            ))
+            .mount(&server)
+            .await;
+
+        let url = server.uri();
+        tokio::task::spawn_blocking(move || {
+            let c = HttpClient::with_base(None, url).unwrap().with_fast_timing();
+            fetch(&c, "alice", None, Some("boardgameexpansion"))
+        })
+        .await
+        .unwrap()
+        .unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -73,7 +99,7 @@ mod tests {
         let url = server.uri();
         let items = tokio::task::spawn_blocking(move || {
             let c = HttpClient::with_base(None, url).unwrap().with_fast_timing();
-            fetch(&c, "alice", None)
+            fetch(&c, "alice", None, None)
         })
         .await
         .unwrap()
