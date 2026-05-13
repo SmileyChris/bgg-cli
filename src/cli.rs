@@ -57,4 +57,16 @@ pub enum Command {
     },
     /// Show auth state, cached username, item count, and last sync time.
     Status,
+    /// Summarize the cached collection: counts, plays, ratings, year, time, players.
+    ///
+    /// Owned-game stats (plays, ratings, year, time, players) restrict to the
+    /// `boardgame` subtype, matching `bgg list`. Status counts (wishlist, etc.)
+    /// include all subtypes.
+    ///
+    /// --json emits the same numbers as a structured object for scripting.
+    Stats {
+        /// Emit stats as JSON instead of a text report.
+        #[arg(long)]
+        json: bool,
+    },
 }

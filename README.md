@@ -22,6 +22,8 @@ bgg list --sort=plays      # sort by plays (also: name, year, bggid, rating, tim
 bgg list --sort ^rating    # prefix `^` inverts the natural direction
 bgg list --cols=all        # show every column; or e.g. --cols=year,name,time
 bgg list --json | jq ...   # full unfiltered collection as JSON
+bgg stats                  # summary: counts, plays, ratings, year/time/players
+bgg stats --json           # same numbers as a JSON object for scripting
 bgg status                 # explicit status (same as `bgg`)
 ```
 
