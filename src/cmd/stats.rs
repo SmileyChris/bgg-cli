@@ -54,6 +54,8 @@ struct ItemsBlock {
 #[derive(Debug, Serialize)]
 struct Statuses {
     own: usize,
+    own_boardgames: usize,
+    own_expansions: usize,
     prev_owned: usize,
     for_trade: usize,
     want: usize,
@@ -175,6 +177,8 @@ fn items_block(all: &[&CollectionItem]) -> ItemsBlock {
 fn statuses(all: &[&CollectionItem]) -> Statuses {
     let mut s = Statuses {
         own: 0,
+        own_boardgames: 0,
+        own_expansions: 0,
         prev_owned: 0,
         for_trade: 0,
         want: 0,
@@ -188,6 +192,11 @@ fn statuses(all: &[&CollectionItem]) -> Statuses {
         let st = &i.status;
         if st.own {
             s.own += 1;
+            match i.subtype.as_str() {
+                "boardgame" => s.own_boardgames += 1,
+                "boardgameexpansion" => s.own_expansions += 1,
+                _ => {}
+            }
         }
         if st.prev_owned {
             s.prev_owned += 1;
@@ -462,7 +471,13 @@ fn print_text(r: &Report) {
         ),
     );
     let s = &r.statuses;
-    print_count("Owned", s.own);
+    print_line(
+        "Owned",
+        format_args!(
+            "{STRONG}{}{STRONG:#}  {MUTED}(boardgames {}, expansions {}){MUTED:#}",
+            s.own, s.own_boardgames, s.own_expansions
+        ),
+    );
     print_count("Previously owned", s.prev_owned);
     let wishlist_suffix = if s.wishlist_by_priority.is_empty() {
         String::new()
