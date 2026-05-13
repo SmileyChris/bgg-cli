@@ -33,10 +33,7 @@ pub enum Command {
         #[arg(long)]
         full: bool,
     },
-    /// List cached collection items.
-    ///
-    /// On a terminal: prints a table of owned base games.
-    /// Piped or redirected: prints the full collection as JSON.
+    /// List cached collection items as a table of owned base games.
     ///
     /// --sort accepts: name, year, bggid, plays, rating, time, added, geek, players.
     /// Each has a natural direction (e.g. plays desc, time asc); prefix with `-`
@@ -45,6 +42,8 @@ pub enum Command {
     /// --cols accepts: year, name, bggid, plays, rating, time, players, geek,
     /// or `all`. Defaults to `year,name`. When --cols is not provided, the
     /// field used by --sort is added implicitly if it has a column.
+    ///
+    /// --json prints the full unfiltered collection as JSON for piping into jq.
     List {
         /// Sort order (table view only).
         #[arg(long, default_value = "name")]
@@ -52,6 +51,9 @@ pub enum Command {
         /// Columns to show, comma-separated, or `all`.
         #[arg(long)]
         cols: Option<String>,
+        /// Emit the full collection as JSON instead of a table.
+        #[arg(long)]
+        json: bool,
     },
     /// Show auth state, cached username, item count, and last sync time.
     Status,

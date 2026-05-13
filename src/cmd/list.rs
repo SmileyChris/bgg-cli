@@ -6,11 +6,11 @@ use crate::paths;
 use std::cmp::Ordering;
 use std::io::IsTerminal;
 
-pub fn run(sort_arg: String, cols_arg: Option<String>) -> Result<()> {
+pub fn run(sort_arg: String, cols_arg: Option<String>, json: bool) -> Result<()> {
     let username = config::require_username()?;
     let cache = cache::load(&paths::cache_file(&username), &username)?;
 
-    if !std::io::stdout().is_terminal() {
+    if json {
         let items: Vec<&CollectionItem> = cache.items.values().collect();
         let out =
             serde_json::to_string_pretty(&items).map_err(|e| Error::Parse(format!("json: {e}")))?;
