@@ -27,13 +27,15 @@ pub fn run(full: bool) -> Result<()> {
     cache::save(&cache_path, &cache)?;
 
     let total = cache.items.len();
-    println!(
-        "Synced {} items into cache ({} new, {} updated, {} unchanged). Total: {total}.",
-        report.new + report.updated + report.unchanged,
-        report.new,
-        report.updated,
-        report.unchanged,
-    );
+    let processed = report.new + report.updated + report.unchanged;
+    if processed == 0 {
+        println!("No changes since last sync. Total: {total} items.");
+    } else {
+        println!(
+            "{processed} items processed ({} new, {} updated, {} unchanged). Total: {total}.",
+            report.new, report.updated, report.unchanged,
+        );
+    }
     if !full {
         println!(
             "Tip: incremental sync cannot detect deletions. Run `bgg sync --full` periodically."
