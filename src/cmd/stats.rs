@@ -466,15 +466,18 @@ fn players_stats(owned: &[&CollectionItem]) -> PlayersStats {
 const LABEL_W: usize = 19;
 
 fn print_text(r: &Report) {
-    let last = r
-        .last_sync
-        .map(|t| t.to_rfc3339())
-        .unwrap_or_else(|| "never".into());
     println!(
         "{LABEL}Collection stats for{LABEL:#} {STRONG}{}{STRONG:#}",
         r.username
     );
-    println!("{LABEL}Last sync:{LABEL:#} {last}");
+    match r.last_sync {
+        Some(t) => println!(
+            "{LABEL}Last sync:{LABEL:#} {} {MUTED}({}){MUTED:#}",
+            human_since(t, Utc::now()),
+            t.to_rfc3339(),
+        ),
+        None => println!("{LABEL}Last sync:{LABEL:#} never"),
+    }
     println!();
 
     println!("{SECTION}Items{SECTION:#}");
