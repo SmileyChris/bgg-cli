@@ -42,7 +42,6 @@ pub fn run() -> Result<()> {
                 .unwrap_or_else(|| "never".into());
             println!("Cache: {} items at {}", c.items.len(), path.display());
             println!("Last sync: {last}");
-            println!("Note: incremental sync does not detect deletions. Use `bgg sync --full`.");
         }
         Err(crate::error::Error::NoCache(_)) => {
             println!("Cache: none yet. Run `bgg sync`.");
