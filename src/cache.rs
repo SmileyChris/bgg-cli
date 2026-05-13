@@ -37,10 +37,19 @@ pub struct MergeReport {
     pub unchanged: u32,
 }
 
+/// Cache key for a collection item. Prefer `collid` (BGG's per-user-collection
+/// id, unique even when the same game appears multiple times) and fall back to
+/// the BGG object id only when collid is missing.
+pub fn item_key(item: &CollectionItem) -> String {
+    item.collid
+        .map(|c| c.to_string())
+        .unwrap_or_else(|| item.id.to_string())
+}
+
 pub fn merge(cache: &mut CacheFile, incoming: Vec<CollectionItem>) -> MergeReport {
     let mut report = MergeReport::default();
     for item in incoming {
-        let key = item.id.to_string();
+        let key = item_key(&item);
         match cache.items.get(&key) {
             None => {
                 report.new += 1;
@@ -78,6 +87,12 @@ mod tests {
             num_plays: 0,
             stats: None,
         }
+    }
+
+    fn item_with_collid(id: u32, collid: u64, name: &str) -> CollectionItem {
+        let mut it = item(id, name);
+        it.collid = Some(collid);
+        it
     }
 
     #[test]
@@ -123,5 +138,21 @@ mod tests {
         );
         assert_eq!(cache.items["2"].name, "Catan: Cities");
         assert!(cache.last_sync.is_some());
+    }
+
+    #[test]
+    fn merge_keys_by_collid_so_duplicate_object_ids_coexist() {
+        let mut cache = CacheFile::empty("alice");
+        // Same BGG object id (174430 = Gloomhaven) appearing twice with
+        // different collid — e.g. a user who owns two printings.
+        let incoming = vec![
+            item_with_collid(174430, 1001, "Gloomhaven (first printing)"),
+            item_with_collid(174430, 1002, "Gloomhaven (anniversary)"),
+        ];
+        let report = merge(&mut cache, incoming);
+        assert_eq!(report.new, 2);
+        assert_eq!(cache.items.len(), 2);
+        assert_eq!(cache.items["1001"].name, "Gloomhaven (first printing)");
+        assert_eq!(cache.items["1002"].name, "Gloomhaven (anniversary)");
     }
 }
