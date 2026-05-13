@@ -1,4 +1,5 @@
 mod error;
+mod model;
 mod paths;
 
 fn main() {
