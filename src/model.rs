@@ -73,3 +73,17 @@ impl Cookies {
         )
     }
 }
+
+/// The full blob persisted to the OS keyring per user. We keep the password
+/// alongside the cookies so we can silently re-login when the SessionID cookie
+/// expires (~1 hour) without re-prompting.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoredCreds {
+    pub password: String,
+    pub cookies: Cookies,
+    /// When we expect the SessionID cookie to stop being accepted (best
+    /// effort; the server may invalidate earlier). None means we don't
+    /// know — fall back to lazy refresh on 401.
+    #[serde(default)]
+    pub session_fresh_until: Option<DateTime<Utc>>,
+}

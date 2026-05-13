@@ -11,8 +11,19 @@ pub fn run() -> Result<()> {
         return Ok(());
     };
     let auth_state = match secrets::load(&username) {
-        Ok(_) => "cookies present",
-        Err(crate::error::Error::AuthRequired) => "no cookies stored — run `bgg auth`",
+        Ok(creds) => match creds.session_fresh_until {
+            Some(until) if until > chrono::Utc::now() => {
+                format!(
+                    "credentials stored; session fresh until {}",
+                    until.to_rfc3339()
+                )
+            }
+            Some(_) => "credentials stored; session expired, will refresh on next sync".to_string(),
+            None => "credentials stored; expiry unknown, refresh on demand".to_string(),
+        },
+        Err(crate::error::Error::AuthRequired) => {
+            "no credentials stored — run `bgg auth`".to_string()
+        }
         Err(e) => {
             println!("User: {username}");
             println!("Auth: error ({e})");
