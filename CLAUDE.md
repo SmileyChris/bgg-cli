@@ -15,8 +15,11 @@ Sync is **one-way (BGG → local)**. Pushing edits back to BGG is out of scope �
 ## Key technical decisions
 
 - **Language:** Rust.
-- **Auth:** Cookie-based via BGG's JSON login endpoint (`POST https://boardgamegeek.com/login/api/v1` with `{"credentials":{"username":..., "password":...}}`). This returns `bggusername` / `bggpassword` / `SessionID` cookies that satisfy the `xmlapi2/collection` auth check. No app registration, no Bearer token, no "Powered by BGG" obligation.
-  - We confirmed empirically that anonymous `xmlapi2/collection` returns `401 Unauthorized` with `WWW-Authenticate: Bearer realm="xml api"`, so auth is mandatory.
+- **Auth:** Cookie-based via BGG's JSON login endpoint (`POST https://boardgamegeek.com/login/api/v1` with `{"credentials":{"username":..., "password":...}}`). Returns `bggusername` / `bggpassword` / `SessionID` cookies (HTTP 204). No app registration, no Bearer token, no "Powered by BGG" obligation.
+  - **Verified empirically 2026-05-13:**
+    - Anonymous calls to every XML endpoint we tried (`xmlapi2/collection`, `xmlapi2/thing`, `xmlapi2/search`, `xmlapi2/hot`, `xmlapi2/user`, `xmlapi/boardgame`, `xmlapi/search`) return `401` with `WWW-Authenticate: Bearer realm="xml api"`.
+    - The login cookies authorize **only `xmlapi2/collection`**. The same cookies still 401 on `xmlapi2/thing`. So cookie auth covers our entire scope but cannot be used to fetch arbitrary item details — any `thing`-based feature would require a registered application and Bearer token.
+    - The 202 → retry pattern is real: first call to `collection` returned 202 with a "queued" message; immediate retry returned 200 with full XML.
 - **Credential storage:** OS keyring via the `keyring` crate (Secret Service / macOS Keychain / Windows Credential Manager). Store the **cookies**, not the password. On 401, prompt for password and re-login.
   - **Fallback:** headless Linux often has no Secret Service running. Need a fallback (encrypted file or plaintext with a loud warning) before this is usable on servers/CI.
 - **The only network call:** `GET https://boardgamegeek.com/xmlapi2/collection?username=<name>&stats=1`. Use `modifiedsince=YY-MM-DD` for incremental sync. Handle `202 Accepted` by retrying with backoff (BGG queues collection requests).
