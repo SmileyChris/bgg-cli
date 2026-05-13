@@ -59,6 +59,9 @@ struct SortSpec {
     direction: Direction,
 }
 
+const SORT_VALUES: &str =
+    "name, year, bggid, plays, rating, time, added, geek, players (prefix with `^` to invert)";
+
 impl SortField {
     fn parse(s: &str) -> Result<Self> {
         Ok(match s {
@@ -71,7 +74,11 @@ impl SortField {
             "added" => SortField::Added,
             "geek" => SortField::Geek,
             "players" => SortField::Players,
-            other => return Err(Error::Parse(format!("unknown sort field `{other}`"))),
+            other => {
+                return Err(Error::BadArg(format!(
+                    "unknown sort field `{other}`. Valid: {SORT_VALUES}"
+                )));
+            }
         })
     }
 
@@ -178,6 +185,8 @@ enum Col {
     Geek,
 }
 
+const COL_VALUES: &str = "year, name, bggid, plays, rating, time, players, geek (or `all`)";
+
 impl Col {
     fn parse(s: &str) -> Result<Self> {
         Ok(match s {
@@ -189,7 +198,11 @@ impl Col {
             "time" => Col::Time,
             "players" => Col::Players,
             "geek" => Col::Geek,
-            other => return Err(Error::Parse(format!("unknown column `{other}`"))),
+            other => {
+                return Err(Error::BadArg(format!(
+                    "unknown column `{other}`. Valid: {COL_VALUES}"
+                )));
+            }
         })
     }
 
@@ -283,7 +296,7 @@ fn resolve_columns(cols_arg: Option<&str>, sort_field: SortField) -> Result<Vec<
             }
         }
         if out.is_empty() {
-            return Err(Error::Parse("--cols is empty".into()));
+            return Err(Error::BadArg("--cols is empty".into()));
         }
         return Ok(out);
     }

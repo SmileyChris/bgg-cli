@@ -17,6 +17,9 @@ pub enum Error {
     #[error("failed to parse BGG XML: {0}")]
     Parse(String),
 
+    #[error("{0}")]
+    BadArg(String),
+
     #[error("cache error at {path}: {source}")]
     Cache {
         path: PathBuf,
