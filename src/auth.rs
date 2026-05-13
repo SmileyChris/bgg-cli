@@ -42,7 +42,7 @@ pub fn login(base: &str, username: &str, password: &str) -> Result<LoginResult> 
         .map_err(Error::Network)?;
 
     if !resp.status().is_success() {
-        return Err(Error::AuthRequired);
+        return Err(Error::BadCredentials);
     }
     extract(resp.headers())
 }
@@ -170,11 +170,12 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn bad_credentials_returns_auth_required() {
+    async fn bad_credentials_returns_bad_credentials_for_400() {
+        // BGG returns 400 for invalid username/password.
         let server = MockServer::start().await;
         Mock::given(method("POST"))
             .and(path("/login/api/v1"))
-            .respond_with(ResponseTemplate::new(401))
+            .respond_with(ResponseTemplate::new(400))
             .mount(&server)
             .await;
 
@@ -183,6 +184,6 @@ mod tests {
             .await
             .unwrap()
             .unwrap_err();
-        assert!(matches!(err, Error::AuthRequired));
+        assert!(matches!(err, Error::BadCredentials));
     }
 }

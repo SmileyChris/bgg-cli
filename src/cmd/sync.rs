@@ -73,7 +73,16 @@ fn fetch_with_refresh(
 }
 
 fn refresh(username: &str, creds: &mut StoredCreds) -> Result<()> {
-    let r = bgg_auth::login(BGG_BASE, username, &creds.password)?;
+    let r = match bgg_auth::login(BGG_BASE, username, &creds.password) {
+        Ok(r) => r,
+        Err(Error::BadCredentials) => {
+            return Err(Error::Secrets(
+                "stored password no longer works (changed on BGG?). Run `bgg auth` to re-enter."
+                    .into(),
+            ));
+        }
+        Err(e) => return Err(e),
+    };
     creds.cookies = r.cookies;
     creds.session_fresh_until = r.session_fresh_until;
     secrets::store(username, creds)

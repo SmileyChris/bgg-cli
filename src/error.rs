@@ -5,6 +5,9 @@ pub enum Error {
     #[error("authentication required: run `bgg auth`")]
     AuthRequired,
 
+    #[error("BGG rejected the username/password")]
+    BadCredentials,
+
     #[error("BGG queued the request and did not return data after {attempts} retries")]
     QueueTimeout { attempts: u32 },
 
