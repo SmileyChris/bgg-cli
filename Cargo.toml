@@ -1,0 +1,34 @@
+[package]
+name = "bgg-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["Chris Beaven"]
+description = "Sync a BoardGameGeek user's collection to a local cache."
+license = "MIT"
+readme = "README.md"
+
+[[bin]]
+name = "bgg"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive", "cargo"] }
+directories = "5"
+keyring = "3"
+quick-xml = { version = "0.36", features = ["serialize"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "cookies", "json", "rustls-tls"] }
+rpassword = "7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+assert_cmd = "2"
+insta = { version = "1", features = ["yaml"] }
+tempfile = "3"
+wiremock = "0.6"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items totalitems="1" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse" pubdate="Sun, 11 May 2026 19:00:00 +0000">
+  <item objecttype="thing" objectid="332686" subtype="boardgame" collid="111111111">
+    <name sortindex="1">John Company: Second Edition</name>
+    <yearpublished>2022</yearpublished>
+    <status own="0" prevowned="0" fortrade="0" want="0" wanttoplay="1" wanttobuy="0"
+            wishlist="1" wishlistpriority="2" preordered="0" lastmodified="2026-03-15 09:00:00"/>
+    <numplays>0</numplays>
+  </item>
+</items>
