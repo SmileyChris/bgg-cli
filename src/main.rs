@@ -21,7 +21,7 @@ fn main() {
         Some(Command::Sync { full }) => cmd::sync::run(full),
         Some(Command::List { sort, cols, json }) => cmd::list::run(sort, cols, json),
         Some(Command::Stats { json }) => cmd::stats::run(json),
-        None | Some(Command::Status) => cmd::status::run(),
+        None => cmd::stats::run_summary(),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");

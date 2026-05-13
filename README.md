@@ -12,7 +12,7 @@ cargo install --path .
 ## Use
 
 ```
-bgg                        # default: status (auth state, item count, last sync)
+bgg                        # one-screen summary: counts, plays, ratings, last sync
 bgg auth                   # prompt for username + password, store credentials in keyring
 bgg auth --clear           # remove stored credentials
 bgg sync                   # incremental sync
@@ -22,9 +22,8 @@ bgg list --sort=plays      # sort by plays (also: name, year, bggid, rating, tim
 bgg list --sort ^rating    # prefix `^` inverts the natural direction
 bgg list --cols=all        # show every column; or e.g. --cols=year,name,time
 bgg list --json | jq ...   # full unfiltered collection as JSON
-bgg stats                  # summary: counts, plays, ratings, year/time/players
+bgg stats                  # full breakdown: counts, plays, ratings, year/time/players
 bgg stats --json           # same numbers as a JSON object for scripting
-bgg status                 # explicit status (same as `bgg`)
 ```
 
 Credentials (password + cookies + session expiry) live in the OS keyring

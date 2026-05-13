@@ -24,6 +24,26 @@ pub fn run(json: bool) -> Result<()> {
     Ok(())
 }
 
+/// One-screen summary printed when `bgg` is run with no subcommand. Acts as the
+/// default landing view: header (user, item count, last sync), four counts /
+/// averages, and a footer pointing at `bgg stats` / `bgg list`.
+pub fn run_summary() -> Result<()> {
+    let Some(username) = config::load()?.username else {
+        println!("No logged-in user. Run `bgg auth`.");
+        return Ok(());
+    };
+    let cache = match cache::load(&paths::cache_file(&username), &username) {
+        Ok(c) => c,
+        Err(Error::NoCache(_)) => {
+            println!("Logged in as {username}. Run `bgg sync` to fetch your collection.");
+            return Ok(());
+        }
+        Err(e) => return Err(e),
+    };
+    print_summary(&build(&cache));
+    Ok(())
+}
+
 const SECTION: Style = Style::new()
     .fg_color(Some(anstyle::Color::Ansi(AnsiColor::Cyan)))
     .effects(Effects::BOLD);
@@ -627,6 +647,77 @@ fn print_text(r: &Report) {
     print_line("Common range", format_args!("{ACCENT}{range}{ACCENT:#}"));
 }
 
+fn print_summary(r: &Report) {
+    let when = match r.last_sync {
+        Some(t) => format!("last sync {}", human_since(t, Utc::now())),
+        None => "never synced".into(),
+    };
+    println!(
+        "{LABEL}Synced as{LABEL:#} {STRONG}{}{STRONG:#} {MUTED}·{MUTED:#} {STRONG}{}{STRONG:#} items {MUTED}·{MUTED:#} {when}",
+        r.username, r.items.total,
+    );
+    println!();
+    print_line(
+        "Total",
+        format_args!(
+            "{STRONG}{}{STRONG:#}  {MUTED}(boardgames {}, expansions {}){MUTED:#}",
+            r.items.total, r.items.boardgames, r.items.expansions,
+        ),
+    );
+    let s = &r.statuses;
+    print_line(
+        "Owned",
+        format_args!(
+            "{STRONG}{}{STRONG:#}  {MUTED}(boardgames {}, expansions {}){MUTED:#}",
+            s.own, s.own_boardgames, s.own_expansions,
+        ),
+    );
+    let owned = &r.owned;
+    if owned.count > 0 {
+        print_line(
+            "Plays",
+            format_args!(
+                "{STRONG}{}{STRONG:#}  {MUTED}across {} of {} owned{MUTED:#}",
+                owned.plays.total, owned.plays.played_count, owned.count,
+            ),
+        );
+        let your = fmt_avg_compact(owned.ratings.your_average);
+        let bgg = fmt_avg_compact(owned.ratings.bgg_average);
+        print_line(
+            "Ratings",
+            format_args!(
+                "{your} {MUTED}your avg{MUTED:#} {MUTED}·{MUTED:#} {bgg} {MUTED}BGG avg{MUTED:#}"
+            ),
+        );
+    }
+    println!();
+    println!("{MUTED}`bgg stats` for full breakdown · `bgg list` for the table{MUTED:#}");
+}
+
+fn human_since(then: DateTime<Utc>, now: DateTime<Utc>) -> String {
+    let s = now.signed_duration_since(then).num_seconds().max(0);
+    if s < 60 {
+        return "just now".into();
+    }
+    let m = s / 60;
+    if m < 60 {
+        return format!("{m}m ago");
+    }
+    let h = m / 60;
+    if h < 24 {
+        return format!("{h}h ago");
+    }
+    let d = h / 24;
+    if d < 30 {
+        return format!("{d}d ago");
+    }
+    let mo = d / 30;
+    if mo < 12 {
+        return format!("{mo}mo ago");
+    }
+    format!("{}y ago", d / 365)
+}
+
 fn print_line(label: &str, value: std::fmt::Arguments<'_>) {
     let pad = LABEL_W.saturating_sub(label.chars().count());
     let spaces = " ".repeat(pad);
@@ -643,6 +734,14 @@ fn fmt_avg(o: Option<f32>) -> String {
     match o {
         Some(v) => format!("{STRONG}{v:<5.2}{STRONG:#}"),
         None => format!("{MUTED}{:<5}{MUTED:#}", "-"),
+    }
+}
+
+/// Unpadded variant for inline summary text where alignment isn't useful.
+fn fmt_avg_compact(o: Option<f32>) -> String {
+    match o {
+        Some(v) => format!("{STRONG}{v:.2}{STRONG:#}"),
+        None => format!("{MUTED}-{MUTED:#}"),
     }
 }
 

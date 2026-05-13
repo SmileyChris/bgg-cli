@@ -11,7 +11,8 @@ pub struct Cli {
     #[arg(short, long, action = clap::ArgAction::Count, global = true)]
     pub verbose: u8,
 
-    /// Subcommand to run. If omitted, runs `status`.
+    /// Subcommand to run. If omitted, prints a one-screen summary of the
+    /// local cache (auth state, item count, top-line stats).
     #[command(subcommand)]
     pub command: Option<Command>,
 }
@@ -55,8 +56,6 @@ pub enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Show auth state, cached username, item count, and last sync time.
-    Status,
     /// Summarize the cached collection: counts, plays, ratings, year, time, players.
     ///
     /// Owned-game stats (plays, ratings, year, time, players) restrict to the

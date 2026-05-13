@@ -11,7 +11,7 @@ fn help_lists_all_subcommands() {
         .stdout
         .clone();
     let text = String::from_utf8(out).unwrap();
-    for sub in ["auth", "sync", "list", "stats", "status"] {
+    for sub in ["auth", "sync", "list", "stats"] {
         assert!(
             text.contains(sub),
             "help missing subcommand: {sub}\n---\n{text}"
@@ -20,14 +20,13 @@ fn help_lists_all_subcommands() {
 }
 
 #[test]
-fn status_with_no_config_says_no_user() {
+fn bare_bgg_with_no_config_says_no_user() {
     let tmp = tempfile::tempdir().unwrap();
     let out = Command::cargo_bin("bgg")
         .unwrap()
         .env("XDG_CONFIG_HOME", tmp.path())
         .env("XDG_STATE_HOME", tmp.path())
         .env("XDG_DATA_HOME", tmp.path())
-        .arg("status")
         .assert()
         .success()
         .get_output()

@@ -8,9 +8,9 @@ use crate::error::{Error, Result};
 use crate::model::{CacheFile, CollectionItem, StoredCreds};
 use crate::paths;
 use crate::secrets;
-use chrono::{DateTime, Utc};
 use anstream::println;
 use anstyle::{Effects, Style};
+use chrono::{DateTime, Utc};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::time::Duration;
 
