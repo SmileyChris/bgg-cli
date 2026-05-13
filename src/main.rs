@@ -2,6 +2,7 @@ mod auth;
 mod bgg;
 mod cache;
 mod cli;
+mod cmd;
 mod config;
 mod error;
 mod model;
@@ -9,9 +10,37 @@ mod paths;
 mod secrets;
 
 use clap::Parser;
+use cli::{Cli, Command};
 
 fn main() {
-    let _cli = cli::Cli::parse();
-    eprintln!("dispatch not yet wired");
-    std::process::exit(1);
+    let parsed = Cli::parse();
+    init_logging(parsed.verbose);
+    let result = match parsed.command {
+        Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
+        None | Some(Command::Status) => {
+            eprintln!("status not yet implemented");
+            std::process::exit(1);
+        }
+        _ => {
+            eprintln!("not yet implemented");
+            std::process::exit(1);
+        }
+    };
+    if let Err(e) = result {
+        eprintln!("error: {e}");
+        std::process::exit(e.exit_code());
+    }
+}
+
+fn init_logging(verbosity: u8) {
+    let level = match verbosity {
+        0 => "warn",
+        1 => "info",
+        2 => "debug",
+        _ => "trace",
+    };
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::new(level))
+        .with_target(false)
+        .try_init();
 }
