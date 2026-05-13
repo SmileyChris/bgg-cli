@@ -18,14 +18,8 @@ fn main() {
     let result = match parsed.command {
         Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
         Some(Command::Sync { full }) => cmd::sync::run(full),
-        None | Some(Command::Status) => {
-            eprintln!("status not yet implemented");
-            std::process::exit(1);
-        }
-        _ => {
-            eprintln!("not yet implemented");
-            std::process::exit(1);
-        }
+        Some(Command::List { owned, json }) => cmd::list::run(owned, json),
+        None | Some(Command::Status) => cmd::status::run(),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");
