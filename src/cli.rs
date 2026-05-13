@@ -1,14 +1,4 @@
-use clap::{Parser, Subcommand, ValueEnum};
-
-#[derive(Clone, Copy, Debug, ValueEnum)]
-pub enum ListSort {
-    /// By name (default), case-insensitive.
-    Name,
-    /// By year published ascending, then name. Items without a year sort last.
-    Year,
-    /// By BGG object id ascending, then name.
-    Bggid,
-}
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(
@@ -47,10 +37,21 @@ pub enum Command {
     ///
     /// On a terminal: prints a table of owned base games.
     /// Piped or redirected: prints the full collection as JSON.
+    ///
+    /// --sort accepts: name, year, bggid, plays, rating, time, added, geek, players.
+    /// Each has a natural direction (e.g. plays desc, time asc); prefix with `-`
+    /// to invert (e.g. `--sort=-time`).
+    ///
+    /// --cols accepts: year, name, bggid, plays, rating, time, players, geek,
+    /// or `all`. Defaults to `year,name`. When --cols is not provided, the
+    /// field used by --sort is added implicitly if it has a column.
     List {
-        /// Sort order (table view only). Name is always the tie-breaker.
-        #[arg(long, value_enum, default_value_t = ListSort::Name)]
-        sort: ListSort,
+        /// Sort order (table view only).
+        #[arg(long, default_value = "name")]
+        sort: String,
+        /// Columns to show, comma-separated, or `all`.
+        #[arg(long)]
+        cols: Option<String>,
     },
     /// Show auth state, cached username, item count, and last sync time.
     Status,
