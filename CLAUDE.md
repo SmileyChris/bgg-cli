@@ -5,12 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Status
 
 Scaffold v0.1 shipped on `main` (2026-05-13). Commands: `bgg auth [--clear]`,
-`bgg sync [--full]`, `bgg list [--filter SPEC] [--sort SPEC] [--cols SPEC] [--json]`,
+`bgg sync [--full]`, `bgg list [--filter SPEC] [--sort SPEC] [--cols SPEC] [--limit N] [--json]`,
 `bgg stats [--json]`. Bare `bgg` prints a one-screen summary; there is no
 `status` subcommand. `--filter` accepts owned, prev-owned, wishlist,
 want-to-play, want-to-buy, preordered, for-trade, expansion, rated, played,
-solo, all — comma-separated, `^` prefix inverts, AND-combined. Default is
-`owned,^expansion`.
+solo, all — comma-separated, `not:` prefix inverts, AND-combined. Default is
+`owned,not:expansion`. `--sort FIELD` uses each field's natural direction
+(plays/rating/added/geek default desc, others asc); append `:asc`/`:desc` to
+override. The `not:` and `:asc/:desc` syntaxes are glob-safe under zsh.
 End-to-end tested against real BGG: 1174-item collection round-trips.
 
 Module layout, design rationale, and deferred work live in the spec at

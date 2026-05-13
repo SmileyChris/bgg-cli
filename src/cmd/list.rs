@@ -75,7 +75,7 @@ enum FilterKind {
     All,
 }
 
-const FILTER_VALUES: &str = "owned, prev-owned, wishlist, want-to-play, want-to-buy, preordered, for-trade, expansion, rated, played, solo, all (prefix with `^` to invert)";
+const FILTER_VALUES: &str = "owned, prev-owned, wishlist, want-to-play, want-to-buy, preordered, for-trade, expansion, rated, played, solo, all (prefix with `not:` to invert)";
 
 impl FilterKind {
     fn parse(s: &str) -> Result<Self> {
@@ -135,8 +135,8 @@ impl FilterSpec {
             if part.is_empty() {
                 continue;
             }
-            let (name, invert) = match part.strip_prefix('^') {
-                Some(rest) => (rest, true),
+            let (name, invert) = match part.strip_prefix("not:") {
+                Some(rest) => (rest.trim(), true),
                 None => (part, false),
             };
             rules.push((FilterKind::parse(name)?, invert));
@@ -187,7 +187,7 @@ struct SortSpec {
 }
 
 const SORT_VALUES: &str =
-    "name, year, bggid, plays, rating, time, added, geek, players (prefix with `^` to invert)";
+    "name, year, bggid, plays, rating, time, added, geek, players (append `:asc` or `:desc` to override the natural direction)";
 
 impl SortField {
     fn parse(s: &str) -> Result<Self> {
@@ -219,18 +219,24 @@ impl SortField {
     }
 }
 
+fn parse_direction(s: &str) -> Result<Direction> {
+    match s {
+        "asc" => Ok(Direction::Asc),
+        "desc" => Ok(Direction::Desc),
+        other => Err(Error::BadArg(format!(
+            "unknown sort direction `{other}`. Valid: asc, desc"
+        ))),
+    }
+}
+
 impl SortSpec {
     fn parse(s: &str) -> Result<Self> {
-        let (name, invert) = match s.strip_prefix('^') {
-            Some(rest) => (rest, true),
-            None => (s, false),
+        let (name, dir_override) = match s.split_once(':') {
+            Some((n, d)) => (n.trim(), Some(parse_direction(d.trim())?)),
+            None => (s, None),
         };
         let field = SortField::parse(name)?;
-        let direction = match (field.natural_direction(), invert) {
-            (d, false) => d,
-            (Direction::Asc, true) => Direction::Desc,
-            (Direction::Desc, true) => Direction::Asc,
-        };
+        let direction = dir_override.unwrap_or_else(|| field.natural_direction());
         Ok(SortSpec { field, direction })
     }
 
@@ -562,26 +568,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sort_parses_field_and_inverts_with_caret_prefix() {
+    fn sort_parses_field_and_uses_natural_direction_by_default() {
         let a = SortSpec::parse("name").unwrap();
         assert_eq!(a.field, SortField::Name);
         assert_eq!(a.direction, Direction::Asc);
 
-        let b = SortSpec::parse("^name").unwrap();
-        assert_eq!(b.direction, Direction::Desc);
-
         let c = SortSpec::parse("plays").unwrap();
         assert_eq!(c.field, SortField::Plays);
         assert_eq!(c.direction, Direction::Desc); // natural
-
-        let d = SortSpec::parse("^plays").unwrap();
-        assert_eq!(d.direction, Direction::Asc); // inverted from natural
     }
 
     #[test]
-    fn sort_rejects_unknown_field() {
+    fn sort_direction_postfix_overrides_natural() {
+        assert_eq!(
+            SortSpec::parse("name:desc").unwrap().direction,
+            Direction::Desc
+        );
+        assert_eq!(
+            SortSpec::parse("plays:asc").unwrap().direction,
+            Direction::Asc
+        );
+        // Explicit direction that matches natural is fine, not an error.
+        assert_eq!(
+            SortSpec::parse("year:asc").unwrap().direction,
+            Direction::Asc
+        );
+    }
+
+    #[test]
+    fn sort_rejects_unknown_field_or_direction() {
         assert!(SortSpec::parse("nope").is_err());
-        assert!(SortSpec::parse("^nope").is_err());
+        assert!(SortSpec::parse("name:sideways").is_err());
     }
 
     #[test]
@@ -635,7 +652,7 @@ mod tests {
 
     #[test]
     fn filter_default_keeps_owned_boardgames_and_drops_expansions() {
-        let spec = FilterSpec::parse("owned,^expansion").unwrap();
+        let spec = FilterSpec::parse("owned,not:expansion").unwrap();
         let bg = item(true, "boardgame", 0);
         let exp = item(true, "boardgameexpansion", 0);
         let unowned = item(false, "boardgame", 0);

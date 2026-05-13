@@ -39,12 +39,12 @@ pub enum Command {
     ///
     /// --filter accepts: owned, prev-owned, wishlist, want-to-play, want-to-buy,
     /// preordered, for-trade, expansion, rated, played, solo, all.
-    /// Comma-separated; prefix `^` to invert. Filters AND together. Defaults to
-    /// `owned,^expansion`. Use `--filter all` to see everything.
+    /// Comma-separated; prefix `not:` to invert. Filters AND together. Defaults
+    /// to `owned,not:expansion`. Use `--filter all` to see everything.
     ///
     /// --sort accepts: name, year, bggid, plays, rating, time, added, geek, players.
-    /// Each has a natural direction (e.g. plays desc, time asc); prefix with `^`
-    /// to invert (e.g. `--sort ^time` for longest first).
+    /// Each has a natural direction (e.g. plays desc, time asc); append `:asc`
+    /// or `:desc` to override (e.g. `--sort time:desc` for longest first).
     ///
     /// --cols accepts: year, name, bggid, plays, rating, time, players, geek,
     /// or `all`. Defaults to `year,name`. When --cols is not provided, the
@@ -54,7 +54,7 @@ pub enum Command {
     /// (ignores --filter).
     List {
         /// Filters to narrow the table view.
-        #[arg(long, default_value = "owned,^expansion")]
+        #[arg(long, default_value = "owned,not:expansion")]
         filter: String,
         /// Sort order (table view only).
         #[arg(long, default_value = "name")]

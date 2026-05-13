@@ -17,11 +17,11 @@ bgg auth                   # prompt for username + password, store credentials i
 bgg auth --clear           # remove stored credentials
 bgg sync                   # incremental sync
 bgg sync --full            # full sync (required to detect deletions)
-bgg list                   # table of owned base games (default --filter owned,^expansion)
+bgg list                   # table of owned base games (default --filter owned,not:expansion)
 bgg list --filter wishlist # filter to wishlist; also prev-owned, want-to-play, want-to-buy, preordered, for-trade, expansion, rated, played, solo, all
-bgg list --filter owned,solo  # AND-combined; prefix `^` to invert
+bgg list --filter owned,solo,not:played  # AND-combined; prefix `not:` to invert
 bgg list --sort=plays      # sort by plays (also: name, year, bggid, rating, time, added, geek, players)
-bgg list --sort ^rating    # prefix `^` inverts the natural direction
+bgg list --sort rating:asc # append :asc or :desc to override the natural direction
 bgg list --cols=all        # show every column; or e.g. --cols=year,name,time
 bgg list --limit 10        # cap rows; footer shows "N of M items" in TTY
 bgg list --json | jq ...   # full unfiltered collection as JSON
