@@ -3,10 +3,20 @@ use crate::config;
 use crate::error::{Error, Result};
 use crate::model::CollectionItem;
 use crate::paths;
+use anstream::println;
+use anstyle::{Effects, Style};
 use std::cmp::Ordering;
 use std::io::IsTerminal;
 
-pub fn run(sort_arg: String, cols_arg: Option<String>, json: bool) -> Result<()> {
+const MUTED: Style = Style::new().effects(Effects::DIMMED);
+
+pub fn run(
+    filter_arg: String,
+    sort_arg: String,
+    cols_arg: Option<String>,
+    limit: Option<usize>,
+    json: bool,
+) -> Result<()> {
     let username = config::require_username()?;
     let cache = cache::load(&paths::cache_file(&username), &username)?;
 
@@ -14,22 +24,139 @@ pub fn run(sort_arg: String, cols_arg: Option<String>, json: bool) -> Result<()>
         let items: Vec<&CollectionItem> = cache.items.values().collect();
         let out =
             serde_json::to_string_pretty(&items).map_err(|e| Error::Parse(format!("json: {e}")))?;
-        println!("{out}");
+        std::println!("{out}");
         return Ok(());
     }
 
+    let filter = FilterSpec::parse(&filter_arg)?;
     let sort = SortSpec::parse(&sort_arg)?;
     let cols = resolve_columns(cols_arg.as_deref(), sort.field)?;
 
-    let mut items: Vec<&CollectionItem> = cache
-        .items
-        .values()
-        .filter(|i| i.status.own && i.subtype == "boardgame")
-        .collect();
+    let mut items: Vec<&CollectionItem> =
+        cache.items.values().filter(|i| filter.matches(i)).collect();
     items.sort_by(|a, b| sort.compare(a, b));
 
+    let total = items.len();
+    if let Some(n) = limit {
+        items.truncate(n);
+    }
     render_table(&items, &cols);
+    if std::io::stdout().is_terminal() {
+        print_footer(items.len(), total);
+    }
     Ok(())
+}
+
+fn print_footer(shown: usize, total: usize) {
+    if total == 0 {
+        println!("{MUTED}No items match the filter.{MUTED:#}");
+    } else if shown < total {
+        println!("{MUTED}Showing {shown} of {total} items.{MUTED:#}");
+    } else {
+        println!("{MUTED}{total} items.{MUTED:#}");
+    }
+}
+
+// ---------- Filter ----------
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FilterKind {
+    Owned,
+    PrevOwned,
+    Wishlist,
+    WantToPlay,
+    WantToBuy,
+    Preordered,
+    ForTrade,
+    Expansion,
+    Rated,
+    Played,
+    Solo,
+    All,
+}
+
+const FILTER_VALUES: &str = "owned, prev-owned, wishlist, want-to-play, want-to-buy, preordered, for-trade, expansion, rated, played, solo, all (prefix with `^` to invert)";
+
+impl FilterKind {
+    fn parse(s: &str) -> Result<Self> {
+        Ok(match s {
+            "owned" => FilterKind::Owned,
+            "prev-owned" => FilterKind::PrevOwned,
+            "wishlist" => FilterKind::Wishlist,
+            "want-to-play" => FilterKind::WantToPlay,
+            "want-to-buy" => FilterKind::WantToBuy,
+            "preordered" => FilterKind::Preordered,
+            "for-trade" => FilterKind::ForTrade,
+            "expansion" => FilterKind::Expansion,
+            "rated" => FilterKind::Rated,
+            "played" => FilterKind::Played,
+            "solo" => FilterKind::Solo,
+            "all" => FilterKind::All,
+            other => {
+                return Err(Error::BadArg(format!(
+                    "unknown --filter value `{other}`. Valid: {FILTER_VALUES}"
+                )));
+            }
+        })
+    }
+
+    fn item_matches(self, i: &CollectionItem) -> bool {
+        match self {
+            FilterKind::Owned => i.status.own,
+            FilterKind::PrevOwned => i.status.prev_owned,
+            FilterKind::Wishlist => i.status.wishlist,
+            FilterKind::WantToPlay => i.status.want_to_play,
+            FilterKind::WantToBuy => i.status.want_to_buy,
+            FilterKind::Preordered => i.status.preordered,
+            FilterKind::ForTrade => i.status.for_trade,
+            FilterKind::Expansion => i.subtype == "boardgameexpansion",
+            FilterKind::Rated => i.stats.as_ref().and_then(|s| s.user_rating).is_some(),
+            FilterKind::Played => i.num_plays > 0,
+            FilterKind::Solo => i
+                .stats
+                .as_ref()
+                .and_then(|s| s.min_players)
+                .is_some_and(|m| m <= 1),
+            FilterKind::All => true,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct FilterSpec {
+    rules: Vec<(FilterKind, bool)>, // (kind, invert)
+}
+
+impl FilterSpec {
+    fn parse(s: &str) -> Result<Self> {
+        let mut rules = Vec::new();
+        for part in s.split(',') {
+            let part = part.trim();
+            if part.is_empty() {
+                continue;
+            }
+            let (name, invert) = match part.strip_prefix('^') {
+                Some(rest) => (rest, true),
+                None => (part, false),
+            };
+            rules.push((FilterKind::parse(name)?, invert));
+        }
+        if rules.is_empty() {
+            return Err(Error::BadArg("--filter is empty".into()));
+        }
+        Ok(FilterSpec { rules })
+    }
+
+    fn matches(&self, i: &CollectionItem) -> bool {
+        self.rules.iter().all(|(kind, invert)| {
+            let m = kind.item_matches(i);
+            if *invert {
+                !m
+            } else {
+                m
+            }
+        })
+    }
 }
 
 // ---------- Sort ----------
@@ -485,5 +612,71 @@ mod tests {
     #[test]
     fn resolve_columns_rejects_unknown() {
         assert!(resolve_columns(Some("year,bogus"), SortField::Name).is_err());
+    }
+
+    fn item(owned: bool, subtype: &str, plays: u32) -> CollectionItem {
+        use crate::model::Status;
+        CollectionItem {
+            id: 1,
+            collid: Some(1),
+            subtype: subtype.into(),
+            name: "x".into(),
+            year_published: None,
+            image: None,
+            thumbnail: None,
+            status: Status {
+                own: owned,
+                ..Default::default()
+            },
+            num_plays: plays,
+            stats: None,
+        }
+    }
+
+    #[test]
+    fn filter_default_keeps_owned_boardgames_and_drops_expansions() {
+        let spec = FilterSpec::parse("owned,^expansion").unwrap();
+        let bg = item(true, "boardgame", 0);
+        let exp = item(true, "boardgameexpansion", 0);
+        let unowned = item(false, "boardgame", 0);
+        assert!(spec.matches(&bg));
+        assert!(!spec.matches(&exp));
+        assert!(!spec.matches(&unowned));
+    }
+
+    #[test]
+    fn filter_played_matches_when_num_plays_gt_zero() {
+        let spec = FilterSpec::parse("played").unwrap();
+        assert!(spec.matches(&item(false, "boardgame", 3)));
+        assert!(!spec.matches(&item(false, "boardgame", 0)));
+    }
+
+    #[test]
+    fn filter_solo_requires_min_players_le_one() {
+        use crate::model::Stats;
+        let mut i = item(true, "boardgame", 0);
+        i.stats = Some(Stats {
+            min_players: Some(1),
+            max_players: Some(4),
+            playing_time: None,
+            user_rating: None,
+            average: None,
+            bayes_average: None,
+            users_rated: None,
+        });
+        assert!(FilterSpec::parse("solo").unwrap().matches(&i));
+        i.stats.as_mut().unwrap().min_players = Some(2);
+        assert!(!FilterSpec::parse("solo").unwrap().matches(&i));
+    }
+
+    #[test]
+    fn filter_rejects_unknown_value() {
+        assert!(FilterSpec::parse("owned,bogus").is_err());
+    }
+
+    #[test]
+    fn filter_rejects_empty_value() {
+        assert!(FilterSpec::parse("").is_err());
+        assert!(FilterSpec::parse("  ,  ").is_err());
     }
 }

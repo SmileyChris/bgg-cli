@@ -19,7 +19,13 @@ fn main() {
     let result = match parsed.command {
         Some(Command::Auth { username, clear }) => cmd::auth::run(username, clear),
         Some(Command::Sync { full }) => cmd::sync::run(full),
-        Some(Command::List { sort, cols, json }) => cmd::list::run(sort, cols, json),
+        Some(Command::List {
+            filter,
+            sort,
+            cols,
+            limit,
+            json,
+        }) => cmd::list::run(filter, sort, cols, limit, json),
         Some(Command::Stats { json }) => cmd::stats::run(json),
         None => cmd::stats::run_summary(),
     };

@@ -34,7 +34,13 @@ pub enum Command {
         #[arg(long)]
         full: bool,
     },
-    /// List cached collection items as a table of owned base games.
+    /// List cached collection items as a table. By default shows owned base
+    /// games (no expansions).
+    ///
+    /// --filter accepts: owned, prev-owned, wishlist, want-to-play, want-to-buy,
+    /// preordered, for-trade, expansion, rated, played, solo, all.
+    /// Comma-separated; prefix `^` to invert. Filters AND together. Defaults to
+    /// `owned,^expansion`. Use `--filter all` to see everything.
     ///
     /// --sort accepts: name, year, bggid, plays, rating, time, added, geek, players.
     /// Each has a natural direction (e.g. plays desc, time asc); prefix with `^`
@@ -44,14 +50,21 @@ pub enum Command {
     /// or `all`. Defaults to `year,name`. When --cols is not provided, the
     /// field used by --sort is added implicitly if it has a column.
     ///
-    /// --json prints the full unfiltered collection as JSON for piping into jq.
+    /// --json prints the full unfiltered collection as JSON for piping into jq
+    /// (ignores --filter).
     List {
+        /// Filters to narrow the table view.
+        #[arg(long, default_value = "owned,^expansion")]
+        filter: String,
         /// Sort order (table view only).
         #[arg(long, default_value = "name")]
         sort: String,
         /// Columns to show, comma-separated, or `all`.
         #[arg(long)]
         cols: Option<String>,
+        /// Cap the table to the first N rows after filtering and sorting.
+        #[arg(long)]
+        limit: Option<usize>,
         /// Emit the full collection as JSON instead of a table.
         #[arg(long)]
         json: bool,
