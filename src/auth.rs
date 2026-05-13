@@ -41,10 +41,20 @@ pub fn login(base: &str, username: &str, password: &str) -> Result<LoginResult> 
         .send()
         .map_err(Error::Network)?;
 
-    if !resp.status().is_success() {
+    let status = resp.status();
+    if status.is_success() {
+        return extract(resp.headers());
+    }
+    // BGG returns 400 for invalid username/password (verified empirically
+    // 2026-05-13). Other non-2xx responses (429, 5xx, CDN error pages) are
+    // not credential problems and shouldn't be reported as such.
+    if status == reqwest::StatusCode::BAD_REQUEST {
         return Err(Error::BadCredentials);
     }
-    extract(resp.headers())
+    if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        return Err(Error::RateLimited);
+    }
+    Err(Error::Parse(format!("login: unexpected status {status}")))
 }
 
 fn extract(headers: &reqwest::header::HeaderMap) -> Result<LoginResult> {

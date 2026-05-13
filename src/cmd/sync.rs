@@ -23,13 +23,18 @@ pub fn run(full: bool) -> Result<()> {
 
     let modified_since = if full { None } else { cache.last_sync };
     let items = fetch_with_refresh(&username, &mut creds, modified_since)?;
-    let report = cache::merge(&mut cache, items);
+    let report = cache::merge(&mut cache, items, full);
     cache::save(&cache_path, &cache)?;
 
     let total = cache.items.len();
     let processed = report.new + report.updated + report.unchanged;
-    if processed == 0 {
+    if processed == 0 && report.removed == 0 {
         println!("No changes since last sync. Total: {total} items.");
+    } else if full {
+        println!(
+            "Full sync: {} new, {} updated, {} unchanged, {} removed. Total: {total}.",
+            report.new, report.updated, report.unchanged, report.removed,
+        );
     } else {
         println!(
             "{processed} items processed ({} new, {} updated, {} unchanged). Total: {total}.",

@@ -13,8 +13,8 @@ cargo install --path .
 
 ```
 bgg                        # default: status (auth state, item count, last sync)
-bgg auth                   # prompt for username + password, store cookies in keyring
-bgg auth --clear           # remove stored cookies
+bgg auth                   # prompt for username + password, store credentials in keyring
+bgg auth --clear           # remove stored credentials
 bgg sync                   # incremental sync
 bgg sync --full            # full sync (required to detect deletions)
 bgg list                   # table of owned base games
@@ -25,8 +25,10 @@ bgg list --json | jq ...   # full unfiltered collection as JSON
 bgg status                 # explicit status (same as `bgg`)
 ```
 
-Cookies live in the OS keyring (Secret Service / macOS Keychain / Windows
-Credential Manager). Headless Linux boxes without a running Secret Service
+Credentials (password + cookies + session expiry) live in the OS keyring
+(Secret Service / macOS Keychain / Windows Credential Manager). The cookie
+session expires after about an hour; `bgg sync` refreshes it silently using
+the stored password. Headless Linux boxes without a running Secret Service
 are not supported in v1.
 
 The cache lives at `$XDG_STATE_HOME/bgg-cli/collection-<username>.json` and is

@@ -35,6 +35,9 @@ pub struct MergeReport {
     pub new: u32,
     pub updated: u32,
     pub unchanged: u32,
+    /// Items removed from the cache because they were not in `incoming`.
+    /// Only set when `merge` is called with `prune = true` (i.e. full sync).
+    pub removed: u32,
 }
 
 /// Cache key for a collection item. Prefer `collid` (BGG's per-user-collection
@@ -46,10 +49,19 @@ pub fn item_key(item: &CollectionItem) -> String {
         .unwrap_or_else(|| item.id.to_string())
 }
 
-pub fn merge(cache: &mut CacheFile, incoming: Vec<CollectionItem>) -> MergeReport {
+/// Merge `incoming` into `cache`.
+///
+/// When `prune` is true, any cache entries whose key is not in `incoming` are
+/// removed. This is what `bgg sync --full` needs to detect deletions; it is
+/// **not** safe in incremental mode, where `incoming` only contains items
+/// modified since the last sync.
+pub fn merge(cache: &mut CacheFile, incoming: Vec<CollectionItem>, prune: bool) -> MergeReport {
     let mut report = MergeReport::default();
+    let mut seen: std::collections::HashSet<String> =
+        std::collections::HashSet::with_capacity(incoming.len());
     for item in incoming {
         let key = item_key(&item);
+        seen.insert(key.clone());
         match cache.items.get(&key) {
             None => {
                 report.new += 1;
@@ -62,6 +74,18 @@ pub fn merge(cache: &mut CacheFile, incoming: Vec<CollectionItem>) -> MergeRepor
                 report.updated += 1;
                 cache.items.insert(key, item);
             }
+        }
+    }
+    if prune {
+        let to_remove: Vec<String> = cache
+            .items
+            .keys()
+            .filter(|k| !seen.contains(k.as_str()))
+            .cloned()
+            .collect();
+        report.removed = to_remove.len() as u32;
+        for k in to_remove {
+            cache.items.remove(&k);
         }
     }
     cache.last_sync = Some(Utc::now());
@@ -127,17 +151,49 @@ mod tests {
             item(2, "Catan: Cities"),
             item(3, "Wingspan"),
         ];
-        let report = merge(&mut cache, incoming);
+        let report = merge(&mut cache, incoming, false);
         assert_eq!(
             report,
             MergeReport {
                 new: 1,
                 updated: 1,
-                unchanged: 1
+                unchanged: 1,
+                removed: 0,
             }
         );
         assert_eq!(cache.items["2"].name, "Catan: Cities");
         assert!(cache.last_sync.is_some());
+    }
+
+    #[test]
+    fn merge_incremental_does_not_prune_missing_entries() {
+        let mut cache = CacheFile::empty("alice");
+        cache.items.insert("1".into(), item(1, "Azul"));
+        cache.items.insert("2".into(), item(2, "Catan"));
+
+        // Incremental sync: BGG only returns items modified since last sync.
+        // The cache MUST keep "Catan" even though it's not in incoming.
+        let incoming = vec![item(1, "Azul: Master Chocolatier")];
+        let report = merge(&mut cache, incoming, false);
+        assert_eq!(report.removed, 0);
+        assert_eq!(cache.items.len(), 2);
+        assert!(cache.items.contains_key("2"));
+    }
+
+    #[test]
+    fn merge_full_prunes_entries_not_in_incoming() {
+        let mut cache = CacheFile::empty("alice");
+        cache.items.insert("1".into(), item(1, "Azul"));
+        cache.items.insert("2".into(), item(2, "Catan"));
+        cache.items.insert("3".into(), item(3, "Wingspan"));
+
+        // Full sync: incoming is the complete current collection.
+        // Items not in incoming were removed from the user's BGG collection.
+        let incoming = vec![item(1, "Azul"), item(3, "Wingspan")];
+        let report = merge(&mut cache, incoming, true);
+        assert_eq!(report.removed, 1);
+        assert_eq!(report.unchanged, 2);
+        assert!(!cache.items.contains_key("2"));
     }
 
     #[test]
@@ -149,7 +205,7 @@ mod tests {
             item_with_collid(174430, 1001, "Gloomhaven (first printing)"),
             item_with_collid(174430, 1002, "Gloomhaven (anniversary)"),
         ];
-        let report = merge(&mut cache, incoming);
+        let report = merge(&mut cache, incoming, false);
         assert_eq!(report.new, 2);
         assert_eq!(cache.items.len(), 2);
         assert_eq!(cache.items["1001"].name, "Gloomhaven (first printing)");
