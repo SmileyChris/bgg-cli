@@ -5,9 +5,11 @@ mod cli;
 mod cmd;
 mod config;
 mod error;
+mod list;
 mod model;
 mod paths;
 mod secrets;
+mod stats;
 
 use clap::Parser;
 use cli::{Cli, Command};
