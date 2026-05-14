@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 use crate::model::{CacheFile, CollectionItem};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use std::path::Path;
 
 pub fn load(path: &Path, username: &str) -> Result<CacheFile> {
@@ -55,7 +55,12 @@ pub fn item_key(item: &CollectionItem) -> String {
 /// removed. This is what `bgg sync --full` needs to detect deletions; it is
 /// **not** safe in incremental mode, where `incoming` only contains items
 /// modified since the last sync.
-pub fn merge(cache: &mut CacheFile, incoming: Vec<CollectionItem>, prune: bool) -> MergeReport {
+pub fn merge_with_last_sync(
+    cache: &mut CacheFile,
+    incoming: Vec<CollectionItem>,
+    prune: bool,
+    last_sync: DateTime<Utc>,
+) -> MergeReport {
     let mut report = MergeReport::default();
     let mut seen: std::collections::HashSet<String> =
         std::collections::HashSet::with_capacity(incoming.len());
@@ -88,7 +93,7 @@ pub fn merge(cache: &mut CacheFile, incoming: Vec<CollectionItem>, prune: bool) 
             cache.items.remove(&k);
         }
     }
-    cache.last_sync = Some(Utc::now());
+    cache.last_sync = Some(last_sync);
     report
 }
 
@@ -97,6 +102,10 @@ mod tests {
     use super::*;
     use crate::model::Status;
     use tempfile::tempdir;
+
+    fn merge(cache: &mut CacheFile, incoming: Vec<CollectionItem>, prune: bool) -> MergeReport {
+        merge_with_last_sync(cache, incoming, prune, Utc::now())
+    }
 
     fn item(id: u32, name: &str) -> CollectionItem {
         CollectionItem {
@@ -163,6 +172,18 @@ mod tests {
         );
         assert_eq!(cache.items["2"].name, "Catan: Cities");
         assert!(cache.last_sync.is_some());
+    }
+
+    #[test]
+    fn merge_can_use_caller_supplied_last_sync_watermark() {
+        let mut cache = CacheFile::empty("alice");
+        let watermark = DateTime::parse_from_rfc3339("2026-05-13T12:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+
+        merge_with_last_sync(&mut cache, vec![item(1, "Azul")], false, watermark);
+
+        assert_eq!(cache.last_sync, Some(watermark));
     }
 
     #[test]

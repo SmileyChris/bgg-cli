@@ -41,6 +41,15 @@ pub struct Stats {
     pub users_rated: Option<u32>,
 }
 
+impl Stats {
+    pub fn supports_player_count(&self, players: u32) -> bool {
+        let (Some(min), Some(max)) = (self.min_players, self.max_players) else {
+            return false;
+        };
+        players > 0 && min > 0 && max > 0 && min <= players && max >= players
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheFile {
     pub username: String,

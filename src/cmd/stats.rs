@@ -128,7 +128,7 @@ struct YearStats {
 struct TimeStats {
     avg_minutes: Option<u32>,
     quick_under_30: usize,
-    medium_30_to_90: usize,
+    medium_30_to_89: usize,
     long_90_to_180: usize,
     epic_over_180: usize,
 }
@@ -415,14 +415,14 @@ fn time_stats(owned: &[&CollectionItem]) -> TimeStats {
         match *t {
             0..=29 => quick += 1,
             30..=89 => medium += 1,
-            90..=179 => long += 1,
+            90..=180 => long += 1,
             _ => epic += 1,
         }
     }
     TimeStats {
         avg_minutes,
         quick_under_30: quick,
-        medium_30_to_90: medium,
+        medium_30_to_89: medium,
         long_90_to_180: long,
         epic_over_180: epic,
     }
@@ -442,10 +442,10 @@ fn players_stats(owned: &[&CollectionItem]) -> PlayersStats {
         if min == 0 || max == 0 {
             continue;
         }
-        if min <= 1 {
+        if stats.supports_player_count(1) {
             solo += 1;
         }
-        if min <= 2 && max >= 2 {
+        if stats.supports_player_count(2) {
             two += 1;
         }
         *ranges.entry((min, max)).or_insert(0) += 1;
@@ -628,7 +628,7 @@ fn print_text(r: &Report) {
         .unwrap_or_else(|| format!("{MUTED}-{MUTED:#}"));
     print_line("Average", format_args!("{avg}"));
     print_count("Quick   (<30m)", owned.time.quick_under_30);
-    print_count("Medium  (30-90m)", owned.time.medium_30_to_90);
+    print_count("Medium  (30-89m)", owned.time.medium_30_to_89);
     print_count("Long    (90-180m)", owned.time.long_90_to_180);
     print_count("Epic    (>180m)", owned.time.epic_over_180);
 
@@ -929,11 +929,18 @@ mod tests {
             i.stats.as_mut().unwrap().playing_time = Some(t);
             i
         };
-        let items = vec![mk(1, 15), mk(2, 60), mk(3, 120), mk(4, 240)];
+        let items = vec![
+            mk(1, 15),
+            mk(2, 30),
+            mk(3, 89),
+            mk(4, 90),
+            mk(5, 180),
+            mk(6, 181),
+        ];
         let r = build(&cache_with(items));
         assert_eq!(r.owned.time.quick_under_30, 1);
-        assert_eq!(r.owned.time.medium_30_to_90, 1);
-        assert_eq!(r.owned.time.long_90_to_180, 1);
+        assert_eq!(r.owned.time.medium_30_to_89, 2);
+        assert_eq!(r.owned.time.long_90_to_180, 2);
         assert_eq!(r.owned.time.epic_over_180, 1);
     }
 

@@ -24,6 +24,7 @@ const SUBTYPES: &[(&str, &str)] = &[
 ];
 
 pub fn run(full: bool) -> Result<()> {
+    let sync_started = Utc::now();
     let username = config::require_username()?;
     let mut creds = secrets::load(&username)?;
 
@@ -48,7 +49,7 @@ pub fn run(full: bool) -> Result<()> {
     }
 
     let pb = add_step(&m, "Merging into local cache…");
-    let report = cache::merge(&mut cache, all_items, full);
+    let report = cache::merge_with_last_sync(&mut cache, all_items, full, sync_started);
     cache::save(&cache_path, &cache)?;
     pb.finish_with_message("Updated local cache");
 

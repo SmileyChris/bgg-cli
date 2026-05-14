@@ -17,7 +17,7 @@ pub enum Error {
     #[error("network error: {0}")]
     Network(#[from] reqwest::Error),
 
-    #[error("failed to parse BGG XML: {0}")]
+    #[error("parse error: {0}")]
     Parse(String),
 
     #[error("{0}")]
