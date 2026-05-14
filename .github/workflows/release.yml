@@ -54,4 +54,8 @@ jobs:
           target: ${{ matrix.target }}
           # tar.gz on unix, .zip on windows — defaults from the action.
           archive: $bin-$tag-$target
+          # On tag push, github.ref is already refs/tags/vX.Y.Z. On a
+          # workflow_dispatch re-run, the input is just "vX.Y.Z" so we
+          # synthesize the full ref the action expects.
+          ref: ${{ github.event.inputs.tag && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
