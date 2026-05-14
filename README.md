@@ -5,6 +5,13 @@ locally, and keeps the cache in sync. One-way (BGG → local). Single user.
 
 ## Install
 
+Prebuilt binaries for Linux x86_64, macOS (arm64 + x86_64), and Windows x86_64
+are attached to each [release](https://github.com/SmileyChris/bgg-cli/releases/latest).
+Download the archive for your platform, extract it, and move `bgg` onto your
+`$PATH`.
+
+Or build from source:
+
 ```
 cargo install --path .
 ```
@@ -37,8 +44,3 @@ are not supported in v1.
 
 The cache lives at `$XDG_STATE_HOME/bgg-cli/collection-<username>.json` and is
 plain JSON — for one-off lookups, just point `jq` at it.
-
-## Status
-
-Alpha. Read the spec at
-[`docs/superpowers/specs/2026-05-13-bgg-cli-scaffold-design.md`](docs/superpowers/specs/2026-05-13-bgg-cli-scaffold-design.md).
