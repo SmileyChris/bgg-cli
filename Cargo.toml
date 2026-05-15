@@ -1,6 +1,6 @@
 [package]
 name = "bgg-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Chris Beaven"]
 description = "Sync a BoardGameGeek user's collection to a local cache."
