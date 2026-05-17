@@ -5,7 +5,7 @@ description: Cut a new bgg-cli release. Drafts friendly notes from the commits s
 
 # Cutting a release
 
-Follow these steps. **Pause for one user confirmation** in step 5 — everything before it is just drafting, nothing is pushed.
+Follow these steps. **Pause for one user confirmation** in step 5 — everything before it is just drafting, nothing is pushed. Also pause if the user asks for edits to the notes.
 
 ## 1. Verify the working tree is clean
 
