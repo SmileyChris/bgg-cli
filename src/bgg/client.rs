@@ -79,10 +79,14 @@ impl HttpClient {
                     if attempts >= self.max_queue_retries {
                         return Err(Error::QueueTimeout { attempts });
                     }
-                    self.report(&format!(
-                        "queued by BGG, retry {attempts}/{}",
-                        self.max_queue_retries
-                    ));
+                    if attempts == 1 {
+                        self.report("queued by BGG");
+                    } else {
+                        self.report(&format!(
+                            "queued by BGG, retry {attempts}/{}",
+                            self.max_queue_retries
+                        ));
+                    }
                     std::thread::sleep(self.queue_retry_delay);
                 }
                 StatusCode::UNAUTHORIZED => return Err(Error::AuthRequired),
