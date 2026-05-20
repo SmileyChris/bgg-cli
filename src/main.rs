@@ -28,7 +28,7 @@ fn main() {
             limit,
             json,
         }) => cmd::list::run(filter, sort, cols, limit, json),
-        Some(Command::Stats { json }) => cmd::stats::run(json),
+        Some(Command::Stats { json, section }) => cmd::stats::run(json, section),
         None => cmd::stats::run_summary(),
     };
     if let Err(e) = result {

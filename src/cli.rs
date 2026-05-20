@@ -75,9 +75,42 @@ pub enum Command {
     /// `boardgame` subtype, matching `bgg list`. Status counts (wishlist, etc.)
     /// include all subtypes.
     ///
-    /// --json emits the same numbers as a structured object for scripting.
+    /// Run without a subcommand for the full overview. Pick a subcommand for a
+    /// deep dive into one area.
     Stats {
         /// Emit stats as JSON instead of a text report.
+        #[arg(long)]
+        json: bool,
+        #[command(subcommand)]
+        section: Option<StatsCommand>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum StatsCommand {
+    /// Deep dive: full play-count ranking, H-index, dimes/nickels/quarters, histogram.
+    Plays {
+        /// Emit as JSON instead of a text report.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Deep dive: rating distribution bar chart, comparison with BGG, biggest deltas.
+    Ratings {
+        #[arg(long)]
+        json: bool,
+    },
+    /// Deep dive: year published distribution, decade summary, full bar chart.
+    Year {
+        #[arg(long)]
+        json: bool,
+    },
+    /// Deep dive: playing time distribution, per-bucket game lists, full sorted list.
+    Time {
+        #[arg(long)]
+        json: bool,
+    },
+    /// Deep dive: player-count matrix, best-at-each-count, exclusives.
+    Players {
         #[arg(long)]
         json: bool,
     },

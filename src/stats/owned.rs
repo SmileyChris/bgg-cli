@@ -1,4 +1,5 @@
 use crate::model::CollectionItem;
+use crate::stats::common;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -62,11 +63,7 @@ pub(crate) struct TopEntry {
 }
 
 pub(crate) fn build(all: &[&CollectionItem]) -> OwnedStats {
-    let owned: Vec<&CollectionItem> = all
-        .iter()
-        .copied()
-        .filter(|i| i.status.own && i.subtype == "boardgame")
-        .collect();
+    let owned = common::owned_boardgames(all.iter().copied());
     OwnedStats {
         count: owned.len(),
         plays: plays_stats(&owned),
@@ -107,33 +104,27 @@ fn plays_stats(owned: &[&CollectionItem]) -> PlaysStats {
 }
 
 fn ratings_stats(owned: &[&CollectionItem]) -> RatingsStats {
-    let rated: Vec<(&&CollectionItem, f32)> = owned
-        .iter()
-        .filter_map(|i| i.stats.as_ref().and_then(|s| s.user_rating).map(|r| (i, r)))
-        .collect();
+    let rated = common::user_ratings(owned.iter().copied());
     let your_average = if rated.is_empty() {
         None
     } else {
         Some(rated.iter().map(|(_, r)| *r).sum::<f32>() / rated.len() as f32)
     };
-    let bgg_vals: Vec<f32> = owned
-        .iter()
-        .filter_map(|i| i.stats.as_ref().and_then(|s| s.average))
-        .collect();
+    let bgg_vals = common::bgg_averages(owned.iter().copied());
     let bgg_average = if bgg_vals.is_empty() {
         None
     } else {
-        Some(bgg_vals.iter().sum::<f32>() / bgg_vals.len() as f32)
+        Some(bgg_vals.iter().map(|(_, r)| *r).sum::<f32>() / bgg_vals.len() as f32)
     };
     let mut your_distribution = [0usize; 10];
     for (_, r) in &rated {
-        if let Some(b) = bucket_1_to_10(*r) {
+        if let Some(b) = common::bucket_1_to_10(*r) {
             your_distribution[b] += 1;
         }
     }
     let mut bgg_distribution = [0usize; 10];
-    for v in &bgg_vals {
-        if let Some(b) = bucket_1_to_10(*v) {
+    for (_, v) in &bgg_vals {
+        if let Some(b) = common::bucket_1_to_10(*v) {
             bgg_distribution[b] += 1;
         }
     }
@@ -162,16 +153,8 @@ fn ratings_stats(owned: &[&CollectionItem]) -> RatingsStats {
     }
 }
 
-fn bucket_1_to_10(r: f32) -> Option<usize> {
-    let b = r.round() as i32;
-    (1..=10).contains(&b).then_some((b - 1) as usize)
-}
-
 fn year_stats(owned: &[&CollectionItem]) -> YearStats {
-    let with_year: Vec<(&&CollectionItem, i32)> = owned
-        .iter()
-        .filter_map(|i| i.year_published.filter(|y| *y > 0).map(|y| (i, y)))
-        .collect();
+    let with_year = common::published_years(owned.iter().copied());
     let oldest = with_year
         .iter()
         .min_by_key(|(_, y)| *y)
@@ -223,14 +206,9 @@ pub(super) fn trim_outlier_years(
 }
 
 fn time_stats(owned: &[&CollectionItem]) -> TimeStats {
-    let times: Vec<u32> = owned
-        .iter()
-        .filter_map(|i| {
-            i.stats
-                .as_ref()
-                .and_then(|s| s.playing_time)
-                .filter(|t| *t > 0)
-        })
+    let times: Vec<u32> = common::playing_times(owned.iter().copied())
+        .into_iter()
+        .map(|(_, t)| t)
         .collect();
     let avg_minutes = if times.is_empty() {
         None
@@ -262,20 +240,17 @@ fn players_stats(owned: &[&CollectionItem]) -> PlayersStats {
     let mut solo = 0;
     let mut two = 0;
     let mut ranges: BTreeMap<(u32, u32), usize> = BTreeMap::new();
-    for i in owned {
-        let Some(stats) = i.stats.as_ref() else {
-            continue;
-        };
-        let (Some(min), Some(max)) = (stats.min_players, stats.max_players) else {
-            continue;
-        };
-        if min == 0 || max == 0 {
-            continue;
-        }
-        if stats.supports_player_count(1) {
+    for (i, (min, max)) in common::player_ranges(owned.iter().copied()) {
+        if i.stats
+            .as_ref()
+            .is_some_and(|stats| stats.supports_player_count(1))
+        {
             solo += 1;
         }
-        if stats.supports_player_count(2) {
+        if i.stats
+            .as_ref()
+            .is_some_and(|stats| stats.supports_player_count(2))
+        {
             two += 1;
         }
         *ranges.entry((min, max)).or_insert(0) += 1;

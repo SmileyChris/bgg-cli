@@ -5,14 +5,15 @@ use anstream::println;
 use anstyle::{AnsiColor, Effects, Style};
 use chrono::{DateTime, Utc};
 
-const SECTION: Style = Style::new()
+pub(crate) const SECTION: Style = Style::new()
     .fg_color(Some(anstyle::Color::Ansi(AnsiColor::Cyan)))
     .effects(Effects::BOLD);
-const LABEL: Style = Style::new().effects(Effects::DIMMED);
-const STRONG: Style = Style::new().effects(Effects::BOLD);
-const ACCENT: Style = Style::new().fg_color(Some(anstyle::Color::Ansi(AnsiColor::Yellow)));
-const MUTED: Style = Style::new().effects(Effects::DIMMED);
-const LABEL_W: usize = 19;
+pub(crate) const LABEL: Style = Style::new().effects(Effects::DIMMED);
+pub(crate) const STRONG: Style = Style::new().effects(Effects::BOLD);
+pub(crate) const ACCENT: Style =
+    Style::new().fg_color(Some(anstyle::Color::Ansi(AnsiColor::Yellow)));
+pub(crate) const MUTED: Style = Style::new().effects(Effects::DIMMED);
+pub(crate) const LABEL_W: usize = 19;
 
 pub(crate) fn print_text(r: &Report) {
     println!(
@@ -270,31 +271,35 @@ fn human_since(then: DateTime<Utc>, now: DateTime<Utc>) -> String {
     format!("{}y ago", d / 365)
 }
 
-fn print_line(label: &str, value: std::fmt::Arguments<'_>) {
+pub(crate) fn print_line(label: &str, value: std::fmt::Arguments<'_>) {
     let pad = LABEL_W.saturating_sub(label.chars().count());
     let spaces = " ".repeat(pad);
     println!("  {LABEL}{label}{LABEL:#}{spaces} {value}");
 }
 
-fn print_count<N: std::fmt::Display>(label: &str, value: N) {
+pub(crate) fn print_count<N: std::fmt::Display>(label: &str, value: N) {
     print_line(label, format_args!("{STRONG}{value}{STRONG:#}"));
 }
 
-fn fmt_avg(o: Option<f32>) -> String {
+pub(crate) fn print_section(heading: &str) {
+    println!("{SECTION}{heading}{SECTION:#}");
+}
+
+pub(crate) fn fmt_avg(o: Option<f32>) -> String {
     match o {
         Some(v) => format!("{STRONG}{v:<5.2}{STRONG:#}"),
         None => format!("{MUTED}{:<5}{MUTED:#}", "-"),
     }
 }
 
-fn fmt_avg_compact(o: Option<f32>) -> String {
+pub(crate) fn fmt_avg_compact(o: Option<f32>) -> String {
     match o {
         Some(v) => format!("{STRONG}{v:.2}{STRONG:#}"),
         None => format!("{MUTED}-{MUTED:#}"),
     }
 }
 
-fn inline_spark(dist: &[usize; 10]) -> String {
+pub(crate) fn inline_spark(dist: &[usize; 10]) -> String {
     if dist.iter().sum::<usize>() == 0 {
         return String::new();
     }
@@ -302,7 +307,15 @@ fn inline_spark(dist: &[usize; 10]) -> String {
     format!("   {LABEL}1{LABEL:#} {ACCENT}{s}{ACCENT:#} {LABEL}10{LABEL:#}")
 }
 
-fn truncate(s: &str, max: usize) -> String {
+pub(crate) fn bar_chart(value: usize, max: usize, width: usize) -> String {
+    if max == 0 || value == 0 {
+        return String::new();
+    }
+    let blocks = (value as f64 / max as f64 * width as f64).ceil() as usize;
+    "█".repeat(blocks.max(1))
+}
+
+pub(crate) fn truncate(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
         s.to_string()
     } else {
